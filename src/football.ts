@@ -299,7 +299,7 @@ export function buildSpecialMatchup(offenseTeam:Side,playId:string,defenseCall:s
   const defend=buildDefense(otherTeam(offenseTeam),lookId,attack,'d43Cover3',los)
   if(defenseCall==='puntReturn'){
     const returner=defend.find(p=>p.position==='FS')!
-    returner.field.yard=Math.min(108,los+40);returner.assignment={kind:'runSupport',target:'return catch'}
+    returner.field.yard=Math.min(108,los+40);returner.preSnap={...returner.field};returner.assignment={kind:'runSupport',target:'return catch'}
   }else if(defenseCall==='puntBlock'||defenseCall==='fieldGoalBlock'){
     defend.filter(p=>p.position==='OLB'||p.position==='MLB').forEach((p,i)=>p.assignment={kind:'blitz',gap:i%2?'C-right':'C-left'})
   }else{

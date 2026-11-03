@@ -28,6 +28,18 @@ test('punt and field goal advance possession',()=>{
   const kick=special({...fresh(1),yard:90,down:4},'fieldGoal')
   assert.equal(kick.possession,'away');assert.equal(kick.score.home,3)
 })
+  test('punt return has a catch, a runback, and matching possession spot',()=>{
+    const returned=special({...fresh(7),yard:30,down:4},'punt','puntReturn')
+    assert.ok(returned.last?.punt)
+    assert.equal(returned.last?.punt?.returnYards,15)
+    assert.equal(returned.last?.punt?.catchYard! - returned.last?.punt?.endYard!,15)
+    assert.equal(returned.yard,100-returned.last!.punt!.endYard)
+    const safe=special({...fresh(7),yard:30,down:4},'punt','puntSafe')
+    assert.equal(safe.last?.punt?.returnYards,0)
+    const touchback=special({...fresh(7),yard:90,down:4},'punt','puntReturn')
+    assert.equal(touchback.last?.punt?.touchback,true)
+    assert.equal(touchback.yard,20)
+  })
 test('a failed fourth down changes possession',()=>{
   const g={...fresh(1),down:4,toGo:8,yard:40}
   const next=finish(g,{yards:2,text:'gain',offense:'sbInside',defense:'d43Cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29},2)

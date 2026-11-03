@@ -6,7 +6,7 @@ export type Phase = 'select' | 'animating' | 'final'
 export type Kind = PlayKind
 export type Play = PlaySpec
 export type Team = { name: string; short: string; color: string; accent: string; ratings: { qb: number; rb: number; wr: number; line: number; rush: number; cover: number }; offense: string[]; defense: string[] }
-export type Result = { yards: number; text: string; offense: string; defense: string; turnover: boolean; touchdown: boolean; safety: boolean; firstDown: boolean; clock: number; event?:'run'|'completion'|'incomplete'|'sack'|'interception'|'fumble'; matchup?:MatchupRating; why?:string; replay?:ReplayPlan; conversionReturn?:boolean; returnerId?:string }
+export type Result = { yards: number; text: string; offense: string; defense: string; turnover: boolean; touchdown: boolean; safety: boolean; firstDown: boolean; clock: number; event?:'run'|'completion'|'incomplete'|'sack'|'interception'|'fumble'; matchup?:MatchupRating; why?:string; replay?:ReplayPlan; conversionReturn?:boolean; returnerId?:string; punt?:{catchYard:number;endYard:number;returnYards:number;touchback:boolean} }
 export type PlayRecord = { snap: number; mine: string; theirs: string; outcome: string }
 export type Conversion = {team:Side;stage:'choice'|'pick'|'result';mode?:'pat'|'two';result?:string}
 export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
@@ -139,11 +139,15 @@ export function special(g:Game,kind:'punt'|'fieldGoal',defenseCall?:string):Game
   const distance=100-g.yard+17,blocked=(defenseCall==='puntBlock'||defenseCall==='fieldGoalBlock')&&r<.1
   const good=kind==='fieldGoal'&&!blocked&&distance<=55&&r<(distance<=35?.9:.68)-(defenseCall==='fieldGoalBlock'?.12:0)
   const puntYards=blocked?0:Math.min(55,37+Math.floor(r*14))
-  const line=blocked?`${team(p).short} ${kind==='punt'?'punt':'field goal'} is blocked!`:kind==='punt'?`${team(p).short} punts ${puntYards} yards${defenseCall==='puntReturn'?'; the return unit gains extra ground':''}.`:good?`${team(p).short} makes a ${distance}-yard field goal! (+3)`:`${team(p).short} misses from ${distance} yards.`
-  const target=blocked?Math.max(1,Math.min(99,100-g.yard+3)):kind==='punt'? Math.max(20,Math.min(80,100-g.yard-puntYards+(defenseCall==='puntReturn'?15:7))):good?25:Math.max(20,100-g.yard)
+  const catchYard=Math.min(100,g.yard+puntYards),touchback=kind==='punt'&&!blocked&&g.yard+puntYards>=100
+  const returnYards=kind==='punt'&&!blocked&&!touchback&&defenseCall!=='puntBlock'&&defenseCall!=='puntSafe'?Math.min(15,Math.max(0,catchYard-1)):0
+  const endYard=catchYard-returnYards
+  const punt=kind==='punt'&&!blocked?{catchYard,endYard,returnYards,touchback}:undefined
+  const line=blocked?`${team(p).short} ${kind==='punt'?'punt':'field goal'} is blocked!`:kind==='punt'?`${team(p).short} punts ${puntYards} yards${touchback?' for a touchback':returnYards?`; ${team(opp).short} returns it ${returnYards} yards`:'; fair catch'}.`:good?`${team(p).short} makes a ${distance}-yard field goal! (+3)`:`${team(p).short} misses from ${distance} yards.`
+  const target=blocked?Math.max(1,Math.min(99,100-g.yard+3)):kind==='punt'?touchback?20:Math.max(1,Math.min(99,100-endYard)):good?25:Math.max(20,100-g.yard)
   const kickingCall=kind==='punt'?'Punt':'Field Goal'
   const receivingCall=({puntReturn:'Punt Return',puntBlock:'Punt Block',puntSafe:'Punt Safe',fieldGoalBlock:'Field Goal Block',fieldGoalSafe:'Field Goal Safe'} as Record<string,string>)[defenseCall??'']??(kind==='punt'?'Punt Return':'Field Goal Block')
   const record={snap:g.snap+1,mine:p==='home'?kickingCall:receivingCall,theirs:p==='home'?receivingCall:kickingCall,outcome:line}
   const why=kind==='punt'?'The punt traded possession for field position. The return or block call influenced the outcome.':'The kick attempted three points from the current distance. The defensive response added pressure without determining the result.'
-  return {...g,seed,quarter:time.quarter,seconds:time.seconds,phase:time.finished?'final':'select',score:good?{...g.score,[p]:g.score[p]+3}:g.score,possession:opp,yard:target,down:1,toGo:Math.min(10,100-target),drive:g.drive+1,snap:g.snap+1,recent:[],last:{yards:kind==='punt'?puntYards:0,text:line,offense:kind,defense:defenseCall??(kind==='punt'?'puntReturn':'fieldGoalSafe'),turnover:false,touchdown:false,safety:false,firstDown:false,clock:8,matchup:'Neutral',why},history:[record,...g.history],log:addLog(g,line)}
+  return {...g,seed,quarter:time.quarter,seconds:time.seconds,phase:time.finished?'final':'select',score:good?{...g.score,[p]:g.score[p]+3}:g.score,possession:opp,yard:target,down:1,toGo:Math.min(10,100-target),drive:g.drive+1,snap:g.snap+1,recent:[],last:{yards:kind==='punt'?puntYards:0,text:line,offense:kind,defense:defenseCall??(kind==='punt'?'puntReturn':'fieldGoalSafe'),turnover:false,touchdown:false,safety:false,firstDown:false,clock:8,matchup:'Neutral',why,punt},history:[record,...g.history],log:addLog(g,line)}
 }

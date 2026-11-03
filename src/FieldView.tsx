@@ -44,7 +44,7 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   if(flow==='HUDDLE'||flow==='PLAY_SELECTED'||flow==='READY_FOR_SNAP')return ['OL','DL'].includes(p.position)&&flow==='READY_FOR_SNAP'?'set':'idle'
   if(flow==='BREAKING_HUDDLE'||flow==='LINING_UP'||flow==='RETURNING_TO_HUDDLE')return 'run'
   if(flow==='PLAY_ENDING'||flow==='SHOWING_RESULT'){
-    if(returnerId&&p.id===returnerId)return 'celebrate'
+    if(returnerId&&p.id===returnerId)return result?.punt?'fall':'celebrate'
     if(p.id===tacklerId)return result?.event==='interception'?'catch':'tackle'
     if(p.id===targetId){if(result?.touchdown)return 'celebrate';if(incomplete)return progress<.6?'catch':'fall';return progress<.25?'run':'fall'}
     return 'idle'
@@ -95,13 +95,23 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
     if(replay?.contact&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
   }
   const returnerId=game.last?.returnerId
+  const punt=game.last?.punt
+  const puntReturner=punt?played.find(p=>p.id===returnerId):undefined
+  const puntFlight=Math.max(0,Math.min(1,(runProgress-.18)/.48))
+  const puntRun=Math.max(0,Math.min(1,(runProgress-.66)/.32))
+  if(punt&&puntReturner){
+    puntReturner.field=runProgress<.66?blendPoint(puntReturner.preSnap,{yard:punt.catchYard,lateral:0},puntFlight):{yard:punt.catchYard-punt.returnYards*puntRun,lateral:0}
+    for(const gunner of played.filter(p=>p.team===matchup.offense[0].team&&p.formationRole.includes('Gunner'))){
+      gunner.field=blendPoint(gunner.preSnap,{yard:punt.endYard,lateral:gunner.preSnap.lateral>0?2:-2},Math.max(0,Math.min(1,(runProgress-.2)/.78)))
+    }
+  }
   const returnSpot=game.last?.offense==='fieldGoal'?game.ballEnd:replay?.targetYard??game.ballStart
   const returner=game.last?.conversionReturn?played.find(p=>p.id===returnerId):undefined
   if(returner) returner.field=runProgress<.35?blendPoint(returner.preSnap,{yard:returnSpot,lateral:0},runProgress/.35):{yard:conversionReturnYard(game.ballStart,returnSpot,runProgress),lateral:0}
   const receivingId=replay?.receiverId
   const incomplete=game.last?.event==='incomplete'
   const intercepted=game.last?.event==='interception'
-  const target=played.find(p=>p.id===replay?.carrierId)
+  const target=puntReturner??played.find(p=>p.id===replay?.carrierId)
   const tackler=replay?.contact?played.find(p=>p.id===replay.tacklerId):undefined
   const angle=tackler&&target?tackleAngle(tackler.field,target.field):'front'
   const players=played.map(p=>{
@@ -117,10 +127,11 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const passing=replay&&['completion','incomplete','interception'].includes(replay.event)
   const flight=Math.max(0,Math.min(1,(runProgress-.23)/.43))
   const kickFlight=Math.max(0,Math.min(1,(runProgress-.16)/.76))
-  const ballYard=playing&&game.last?.conversionReturn?conversionReturnYard(game.ballStart,returnSpot,runProgress):playing&&kick?game.ballStart+(game.ballEnd-game.ballStart)*kickFlight:playing&&passing?runProgress<.65?replay.startYard+(replay.targetYard-replay.startYard)*flight:replay.event==='completion'?replayCarrierYard(replay,runProgress):replay.targetYard:playing&&target?target.field.yard:game.yard
-  const ballLateral=playing&&game.last?.conversionReturn?returner?.field.lateral??0:playing&&kick?(game.last?.text.toUpperCase().includes('MISS')?13*kickFlight:0):playing&&passing?(thrower?.field.lateral??0)+((replay.targetLateral-(thrower?.field.lateral??0))*flight):playing&&target?target.field.lateral:0
+  const punterYard=thrower?.preSnap.yard??game.ballStart-12
+  const ballYard=playing&&punt?runProgress<.18?game.ballStart+(punterYard-game.ballStart)*runProgress/.18:runProgress<.66?punterYard+(punt.catchYard-punterYard)*puntFlight:punt.catchYard-punt.returnYards*puntRun:playing&&game.last?.conversionReturn?conversionReturnYard(game.ballStart,returnSpot,runProgress):playing&&kick?game.ballStart+(game.ballEnd-game.ballStart)*kickFlight:playing&&passing?runProgress<.65?replay.startYard+(replay.targetYard-replay.startYard)*flight:replay.event==='completion'?replayCarrierYard(replay,runProgress):replay.targetYard:playing&&target?target.field.yard:game.yard
+  const ballLateral=playing&&punt?runProgress<.66?0:puntReturner?.field.lateral??0:playing&&game.last?.conversionReturn?returner?.field.lateral??0:playing&&kick?(game.last?.text.toUpperCase().includes('MISS')?13*kickFlight:0):playing&&passing?(thrower?.field.lateral??0)+((replay.targetLateral-(thrower?.field.lateral??0))*flight):playing&&target?target.field.lateral:0
   const ballX=world(ballYard)
-  const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*(passing?flight:kickFlight)):0)+(incomplete&&ending?12*progress:0)
+  const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*(passing?flight:punt?runProgress<.66?puntFlight:0:kickFlight)):0)+(incomplete&&ending?12*progress:0)
   const focus=playing?ballX:world(game.yard)
   const targetCamera=Math.max(0,Math.min(1000-viewWidth,focus-viewWidth/2))
   const [camera,setCamera]=useState(targetCamera)
