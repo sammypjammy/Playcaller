@@ -60,6 +60,20 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   return 'run'
 }
 export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,previousMatchup,resultText}:Props){
+  const shellRef=useRef<HTMLDivElement>(null)
+  const [viewWidth,setViewWidth]=useState(700)
+  useEffect(()=>{
+    const shell=shellRef.current
+    if(!shell)return
+    const update=()=>{
+      const {width,height}=shell.getBoundingClientRect()
+      if(height>0)setViewWidth(Math.max(440,Math.min(1000,Math.round(420*width/height))))
+    }
+    const observer=new ResizeObserver(update)
+    observer.observe(shell)
+    update()
+    return()=>observer.disconnect()
+  },[])
   const homeAttack=game.possession==='home'
   const world=(yard:number)=>homeAttack?yardX(yard):yardX(100-yard)
   const fieldY=lateralY
@@ -108,14 +122,14 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const ballX=world(ballYard)
   const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*(passing?flight:kickFlight)):0)+(incomplete&&ending?12*progress:0)
   const focus=playing?ballX:world(game.yard)
-  const targetCamera=Math.max(0,Math.min(300,focus-350))
+  const targetCamera=Math.max(0,Math.min(1000-viewWidth,focus-viewWidth/2))
   const [camera,setCamera]=useState(targetCamera)
   const cameraRef=useRef(camera)
   useEffect(()=>{let frame=0;const glide=()=>{const next=cameraRef.current+(targetCamera-cameraRef.current)*.18;cameraRef.current=Math.abs(next-targetCamera)<.15?targetCamera:next;setCamera(cameraRef.current);if(cameraRef.current!==targetCamera)frame=requestAnimationFrame(glide)};frame=requestAnimationFrame(glide);return()=>cancelAnimationFrame(frame)},[targetCamera])
-  return <div className="fieldShell">
-    <svg viewBox="0 0 700 420" role="img" aria-label={`American football field with ${players.length} individually positioned players`}>
+  return <div className="fieldShell" ref={shellRef}>
+    <svg viewBox={`0 0 ${viewWidth} 420`} role="img" aria-label={`American football field with ${players.length} individually positioned players`}>
       <SpriteAtlas/>
-      <defs><pattern id="grain" width="13" height="11" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="2" height="1" fill="#a7cd7e" opacity=".25"/><rect x="9" y="8" width="2" height="1" fill="#173e31" opacity=".22"/></pattern><pattern id="endHatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 12 12 0" stroke="#fff" strokeOpacity=".1" strokeWidth="3"/></pattern><clipPath id="clip"><rect x="0" y="0" width="700" height="420"/></clipPath></defs>
+      <defs><pattern id="grain" width="13" height="11" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="2" height="1" fill="#a7cd7e" opacity=".25"/><rect x="9" y="8" width="2" height="1" fill="#173e31" opacity=".22"/></pattern><pattern id="endHatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 12 12 0" stroke="#fff" strokeOpacity=".1" strokeWidth="3"/></pattern><clipPath id="clip"><rect x="0" y="0" width={viewWidth} height="420"/></clipPath></defs>
       <g clipPath="url(#clip)"><g transform={`translate(${-camera} 0)`}>
         <rect width="1000" height="420" fill="#153e32"/>{turfBands.map((band,i)=><rect key={band.yard} x={band.x} y="15" width={band.width} height="390" fill={i%2?'#34764f':'#3b8157'}/>)}<rect y="15" width="1000" height="390" fill="url(#grain)"/>
         <rect x="0" y="15" width={yardX(0)} height="390" fill={teamVisuals.home.endZone}/><rect x={yardX(100)} y="15" width={yardX(0)} height="390" fill={teamVisuals.away.endZone}/>
