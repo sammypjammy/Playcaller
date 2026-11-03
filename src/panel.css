@@ -1,0 +1,36 @@
+.gameLog{margin-top:22px;min-height:130px}
+.coach .callHead{padding:17px 18px 8px}
+.coach .callHead h1{font-size:29px;margin:5px 0}
+.historyHead{margin:3px 18px 8px;color:#6d786b;font-size:9px;font-weight:900;letter-spacing:1.3px}
+.historyGrid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:0 14px 14px;border:1px solid #c9d2bf;background:#f3f4e9}
+.historyColumn+.historyColumn{border-left:1px solid #c9d2bf}
+.historyColumn>b{display:block;padding:8px 9px;background:#dbe7bd;color:#2c4a2b;font-size:9px;letter-spacing:1px}
+.historyColumn p{padding:10px;color:#788477;font-size:10px}
+.historyItem{height:61px;padding:6px 8px;border-top:1px solid #d9dfd1;overflow:hidden}
+.historyItem small{display:inline-block;width:25px;color:#8b9988;font-size:8px;font-weight:900}
+.historyItem strong{font:800 15px/1 'Barlow Condensed';color:#263b28}
+.historyItem span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px;color:#6f7e6b;font-size:9px}
+.coach .situation{margin-bottom:8px}
+.folderList{margin:0 14px}
+.folder{border-bottom:1px solid #cdd5c4}
+.folderToggle{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:#e1e6d5;padding:10px 11px;color:#354934;font-size:10px;font-weight:900;letter-spacing:1px}
+.folderToggle.open{background:#cbdcaf;color:#263f27}
+.folderToggle i{font-size:18px;font-style:normal;line-height:8px;margin-left:7px}
+.folder .callList{padding:7px 0 3px;max-height:none;display:block}
+.folder .call{margin-bottom:4px}
+.emptyFolder{margin:8px;padding:5px;color:#768372;font-size:11px;line-height:1.4}
+.coach .callDetail{margin:10px 18px 8px;min-height:39px}
+.coach .snap{margin:0 18px}
+.coach .speed{margin-left:18px}
+@media(max-width:1000px){.folder .callList{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}}
+@media(max-width:640px){.folder .callList{display:block}.historyItem strong{font-size:13px}}
+.formationPicker{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 14px 12px}
+.formationPicker label{font-size:8px;font-weight:900;letter-spacing:1px;color:#657365;min-width:0}
+.formationPicker label:only-child{grid-column:1/-1}
+.formationPicker select{display:block;width:100%;margin-top:5px;padding:8px 6px;background:#f3f5e9;border:1px solid #bdc9b5;color:#273b2a;font:700 12px 'DM Sans',sans-serif}
+.coach .debugSwitch{margin-top:0}
+.debugOverlay{position:absolute;z-index:3;right:8px;top:8px;width:min(360px,70%);max-height:85%;overflow:auto;padding:9px;background:#0b1c19eb;border:1px solid #c8e6ad;color:#eff7e7;font-size:9px;box-shadow:0 8px 20px #0008}
+.debugOverlay>b{display:block;margin-bottom:6px;color:#d8ec83;letter-spacing:.8px}
+.debugRows>div{padding:4px 0;border-top:1px solid #52685a}
+.debugRows strong,.debugRows span{display:block}
+.debugRows span{color:#b5c6b4;line-height:1.35}
