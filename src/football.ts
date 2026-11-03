@@ -32,8 +32,8 @@ const pistolBack=[{depth:-7,lateral:0},{depth:-5,lateral:3}]
 const F=(id:string,name:string,family:OffensiveFormation['family'],compatible:PersonnelCode[],defaultPersonnel:PersonnelCode,qbDepth:number,backSlots:BackSlot[],teLateral:number[],wrLateral:number[],lineEnds:OffensiveFormation['lineEnds'],mirrorOf?:string):OffensiveFormation=>({id,name,family,compatible,defaultPersonnel,qbDepth,backSlots,teLateral,wrLateral,lineEnds,mirrorOf})
 export const offensiveFormations:OffensiveFormation[]=[
   F('i','I-Formation','underCenter',['20','21','22','23'],'21',-.9,underBack,[5,-5,8],[-20,20,-12,12,0],'tightRight'),
-  F('strongI','Strong I','underCenter',['20','21','22','23'],'21',-.9,[{depth:-7,lateral:2.5},{depth:-4,lateral:2.5}],[5,-5,8],[-20,20,-12,12,0],'tightRight'),
-  F('weakI','Weak I','underCenter',['20','21','22','23'],'21',-.9,[{depth:-7,lateral:-2.5},{depth:-4,lateral:-2.5}],[-5,5,-8],[20,-20,12,-12,0],'tightLeft','strongI'),
+  F('strongI','Strong I','underCenter',['20','21','22','23'],'21',-.9,[{depth:-7,lateral:0},{depth:-4,lateral:2.5}],[5,-5,8],[-20,20,-12,12,0],'tightRight'),
+  F('weakI','Weak I','underCenter',['20','21','22','23'],'21',-.9,[{depth:-7,lateral:0},{depth:-4,lateral:-2.5}],[-5,5,-8],[20,-20,12,-12,0],'tightLeft','strongI'),
   F('ace','Singleback Ace','underCenter',['11','12','13'],'12',-.9,singleBack,[-5,5,8],[-20,20,-12,12,0],'tightBoth'),
   F('singleDoubles','Singleback','underCenter',['11'],'11',-.9,singleBack,[5,-5,8],[-20,20,-12,12,0],'tightRight'),
   F('singleTrips','Singleback Trips','underCenter',['10','11','12'],'11',-.9,singleBack,[5,-5,8],[-20,8,15,22,-12],'tightRight'),
@@ -169,6 +169,7 @@ export function buildDefense(team:Side,lookId:string,offense:ActivePlayer[],call
   const concept=defenseById(callId)?.concept??'cover3'
   const teRight=offense.some(p=>p.position==='TE'&&p.field.lateral>0)
   const teLeft=offense.some(p=>p.position==='TE'&&p.field.lateral<0)
+  const strengthShift=teRight && !teLeft ? 0.8 : teLeft && !teRight ? -0.8 : 0
   pack.line.forEach((position,i)=>{
     const slot=front.slots[i],sign=slot.side==='left'?-1:slot.side==='right'?1:0
     const shift=sign>0&&teRight?.25:sign<0&&teLeft?-.25:0
@@ -176,7 +177,7 @@ export function buildDefense(team:Side,lookId:string,offense:ActivePlayer[],call
     p.technique=slot.technique;p.assignment={kind:'passRush',gap:slot.gap};players.push(p)
   })
   pack.linebackers.forEach((position,i)=>{
-    const lateral=(i-(pack.linebackers.length-1)/2)*4.8
+    const lateral=(i-(pack.linebackers.length-1)/2)*4.8+strengthShift
     const p=active(next(position),['Will LB','Mike LB','Sam LB','Jack LB'][i],{yard:los+5.8,lateral},false,false)
     const gaps:Gap[]=['B-left','A-left','A-right','B-right']
     const blitz=concept==='cover0'?i===pack.linebackers.length-1:concept==='sam-blitz'?i===pack.linebackers.length-1:concept==='outside-blitz'?i===0||i===pack.linebackers.length-1:concept==='inside-blitz'?i===1||i===2:false
@@ -188,7 +189,7 @@ export function buildDefense(team:Side,lookId:string,offense:ActivePlayer[],call
   const slotLateral=wr.slice(1,-1).map(p=>p.field.lateral)
   pack.backs.forEach((position,i)=>{
     const isCorner=position==='CB',isSafety=position==='FS'||position==='SS'
-    const lateral=isCorner?cornerLateral[counts.CB??0]??(i%2?-18:18):isSafety?(position==='FS'?-8:8):slotLateral[(counts.NB??0)+(counts.DB??0)]??(position==='NB'?-10:10+6*(counts.DB??0))
+    const lateral=isCorner?cornerLateral[counts.CB??0]??(i%2?-18:18):isSafety?(position==='FS'?-8:8)+strengthShift:slotLateral[(counts.NB??0)+(counts.DB??0)]??(position==='NB'?-10:10+6*(counts.DB??0))
     const depth=Math.min(isSafety?(coverageId==='cover0'?5:coverageId==='pressMan'&&position==='SS'?6:coverageId==='cover3'&&position==='SS'?8:coverageId==='prevent'?20:14):isCorner?(coverageId==='cover0'||coverageId==='pressMan'||coverageId==='cover2Man'?1.1:coverageId==='prevent'?14:7):coverageId==='cover0'||coverageId==='pressMan'?2:9,110-los-.5)
     const role=isCorner?`${(counts.CB??0)===0?'Left':'Right'} Corner`:position==='FS'?'Free Safety':position==='SS'?'Strong Safety':position==='NB'?'Nickel Slot':`Dime Back ${counts.DB??0}`
     const p=active(next(position),role,{yard:los+depth,lateral},false,false)

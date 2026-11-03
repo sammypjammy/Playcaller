@@ -7,6 +7,7 @@ import { blendPoint, huddlePositions, tackleAngle } from './fieldPresentation'
 import type { FlowPhase } from './flow'
 import { lateralY, turfBands, yardLines, yardX } from './fieldGeometry'
 import { conversionReturnYard, replayCarrierYard, replayTacklerPosition } from './replay'
+import { assignmentPath, pointOnPath } from './assignmentPath'
 
 type Props={game:Game;matchup:Matchup;progress:number;debug:boolean;flow:FlowPhase;fromMatchup:Matchup|null;previousMatchup:Matchup|null;resultText:string}
 function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string):ActivePlayer {
@@ -29,16 +30,9 @@ function motion(player:ActivePlayer,result:Result|undefined,progress:number,play
     lateral=replay&&(replay.event==='run'||replay.event==='fumble')?(replay.targetLateral-player.preSnap.lateral)*Math.min(1,carryProgress/.9):sign*(gap.startsWith('D')?7:gap.startsWith('C')?4:gap.startsWith('B')?2.5:.7)*carryProgress
   }
   else if(kind==='handoff'||kind==='playAction')forward=1.2*progress
-  else if(kind==='route'){
-    const route=assignment.route??''
-    forward=(/vertical|gunner go|go/.test(route)?18:/post|corner/.test(route)?14:/cross|mesh|out/.test(route)?9:/bubble|flat|screen/.test(route)?3:7)*progress
-    lateral=/cross|post/.test(route)?-Math.sign(player.field.lateral)*(/cross/.test(route)?9:5)*progress:/out|flat|bubble/.test(route)?Math.sign(player.field.lateral)*4*progress:0
-  }
-  else if(kind==='pullBlock'){forward=2.5*progress;lateral=(assignment.gap?.endsWith('left')?-1:1)*3*progress}
-  else if(kind==='leadBlock')forward=3*progress
-  else if(kind==='runBlock'||kind==='passBlock'||kind==='protection'){
-    forward=1.2*progress
-    if(kind==='runBlock'&&(assignment.target==='outside-zone'||assignment.target==='toss'))lateral=(assignment.gap?.endsWith('left')?-1:1)*1.5*progress
+  else if(['route','pullBlock','leadBlock','runBlock','passBlock','protection'].includes(kind)){
+    const point=pointOnPath(assignmentPath(player),progress)
+    forward=point.forward;lateral=point.lateral
   }
   else if(kind==='passRush'||kind==='blitz'){forward=-3.8*progress;lateral=-Math.sign(player.field.lateral)*.6*progress}
   else if(kind==='runGap'||kind==='edgeContain')forward=-1.8*progress

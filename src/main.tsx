@@ -52,7 +52,6 @@ function App(){
   const pending=useRef<PendingPlay|null>(null)
   const specialTransition=useRef(false)
   const snapLock=useRef(false)
-  const fieldRef=useRef<HTMLElement>(null)
   const selection:CallCard[]=g.possession==='home'?[...offense,...(g.down===4?offensiveSpecial:[])]:[...defense,...(g.down===4?defensiveSpecial:[])]
   const group=g.possession==='home'?offenseGroups.find(x=>x.id===offFormation)!:defenseGroups.find(x=>x.id===defLook)!
   const predictedKick=opponentSpecial(g)
@@ -86,7 +85,6 @@ function App(){
     setTransitionFrom(flow.phase==='READY_FOR_SNAP'?previewMatchup:null)
     setG(old=>({...old,selected:id}))
     dispatch('SELECT')
-    if(window.innerWidth<=760)fieldRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
   }
   const kickPAT=(choice:Game)=>{
     if(snapLock.current)return
@@ -120,7 +118,6 @@ function App(){
       setLiveMatchup(previewMatchup)
       setG({...g,phase:'animating',selected:chosen,seed:next.seed,ballStart:98,ballEnd:Math.max(0,Math.min(100,98+(next.last?.yards??0)))})
       dispatch('SNAP')
-      fieldRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
       return
     }
     const aiKick=opponentSpecial(g)
@@ -132,7 +129,6 @@ function App(){
       setLiveMatchup(previewMatchup)
       setG({...g,phase:'animating',selected:chosen,ballStart:g.yard,ballEnd:kick==='fieldGoal'?(next.last?.text.includes('blocked')?g.yard+3:110):Math.min(100,g.yard+(next.last?.yards??0))})
       dispatch('SNAP')
-      fieldRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
       return
     }
     const attack=g.possession==='home'?chosen:selectAI(g)
@@ -143,7 +139,6 @@ function App(){
     setLiveMatchup(previewMatchup)
     setG({...g,phase:'animating',selected:chosen,seed,ballStart:g.yard,ballEnd:Math.max(0,Math.min(100,g.yard+result.yards))})
     dispatch('SNAP')
-    fieldRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
   }
   useEffect(()=>{
     if(flow.phase==='PLAY_SELECTED'){dispatch('BREAK');return}
@@ -205,7 +200,7 @@ function App(){
     <header className="topbar"><div className="brand"><span className="brandmark">P</span><div><strong>PLAYCALLER</strong><small>SIDELINE STRATEGY FOOTBALL</small></div></div><div className="toplinks"><span>EXHIBITION • IRON CITY VS BAYPORT</span><button onClick={()=>setEdit(true)}>MY FAVORITES</button></div></header>
     <main>
       <section className="scoreboard"><div className={`team home ${g.possession==='home'?'hasBall':''}`}><span className="crest">IC</span><div><small>HOME {g.possession==='home'?'◆ BALL':''}</small><strong>IRON CITY</strong><em>FOUNDRY</em></div><b>{g.score.home}</b></div><div className="centerScore"><span>Q{g.quarter} <i>•</i> {clockText(g.seconds)}</span><strong>{situation}</strong><small>{g.phase==='final'?'EXHIBITION COMPLETE':g.conversion?`${team(g.conversion.team).short} CONVERSION`: `${team(g.possession).short} BALL · ${fieldPosition(g.yard)} · PLAY ${String(playClock).padStart(2,'0')}`}</small></div><div className={`team away ${g.possession==='away'?'hasBall':''}`}><b>{g.score.away}</b><div><small>AWAY {g.possession==='away'?'◆ BALL':''}</small><strong>BAYPORT</strong><em>BREAKERS</em></div><span className="crest">BB</span></div></section>
-      <div className="layout"><section className="gameColumn" ref={fieldRef}><div className="fieldHeader"><span>LIVE FIELD</span><span>{flow.phase.replaceAll('_',' ')}</span></div>
+      <div className="layout"><section className="gameColumn"><div className="fieldHeader"><span>LIVE FIELD</span><span>{flow.phase.replaceAll('_',' ')}</span></div>
         <FieldView game={fieldGame} matchup={matchup} progress={progress} debug={debug&&(g.possession==='away'||isPlaying(flow.phase))} flow={flow.phase} fromMatchup={transitionFrom} previousMatchup={liveMatchup} resultText={playResult}/>
         {g.last&&g.phase!=='animating'&&<div className="feedback" role="status"><b>WHY THAT PLAY?</b><div><span><small>OFFENSE</small>{feedbackOffense}</span><span><small>DEFENSE</small>{feedbackDefense}</span><span><small>MATCHUP</small>{g.last.matchup??'Neutral'}</span><span><small>RESULT</small>{g.last.text}</span></div><p>{g.last.why} {executionNote(g.last)}</p></div>}
       </section>
