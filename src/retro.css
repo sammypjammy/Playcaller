@@ -147,3 +147,70 @@ main{padding:12px 22px 32px}
   .playHistory{height:46px;margin:0;padding:2px 6px}.playHistory h2{font-size:12px;margin:0}.playHistoryList{max-height:26px}.playHistoryItem{padding:1px;font-size:8px}.playHistoryItem small{font-size:6px}
   footer{padding:2px 8px;font-size:7px}
 }
+
+/* Field, insights, and play picker occupy the same full-height game row. */
+@media (min-width:1100px){
+  .app{height:100dvh;min-height:0;display:grid;grid-template-rows:56px minmax(0,1fr) 28px;overflow:hidden}
+  main{height:100%;min-height:0;width:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:8px 20px 6px}
+  .scoreboard{margin:0}
+  .layout{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(185px,15vw,235px) clamp(295px,23vw,355px);gap:12px}
+  .gameColumn{min-height:0;display:flex;flex-direction:column}
+  .gameColumn .fieldHeader{flex:none;margin-bottom:5px}
+  .gameColumn .fieldShell,.gameColumn:not(:has(.feedback)) .fieldShell{flex:1;min-height:0;height:auto;width:100%;max-width:none;max-height:none;aspect-ratio:auto;margin:0}
+  .gameColumn .fieldShell svg{width:100%;height:100%;min-height:0}
+  .insightsColumn{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px}
+  .insightsColumn .feedback{height:auto;min-height:0;max-height:46dvh;margin:0;padding:9px 10px;overflow:auto}
+  .insightsColumn .feedback>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:7px 0}
+  .insightsColumn .feedback span{font-size:13px;padding:5px}.insightsColumn .feedback p{font-size:10px;line-height:1.35;margin:5px 0}
+  .insightsColumn .playHistory{height:auto;min-height:0;margin:0;padding:9px 8px;display:flex;flex-direction:column}
+  .insightsColumn .playHistoryList{flex:1;min-height:0;max-height:none;overflow:auto}
+  .insightsColumn .playHistoryItem{grid-template-columns:28px minmax(0,1fr) minmax(0,1fr);gap:4px;font-size:10px;padding:7px 2px}
+  .insightsColumn .playHistoryItem span:last-child{grid-column:2/-1}
+  .coach{height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .coach .folderList{flex:1;min-height:0;overflow:hidden}.coach .folder{height:100%;min-height:0;display:flex;flex-direction:column}
+  .coach .folder .callList{flex:1;min-height:0;max-height:none;overflow:auto;grid-template-columns:1fr}
+  .coach .folder .call{min-height:61px}.coach .miniDiagram{width:62px;height:48px}
+  footer{padding:5px 20px}
+}
+@media (min-width:700px) and (max-width:1099px){
+  .app{height:100dvh;min-height:0;display:grid;grid-template-rows:56px minmax(0,1fr) 28px;overflow:hidden}
+  main{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:8px 12px 6px}
+  .scoreboard{margin:0}.layout{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 295px;grid-template-rows:minmax(0,1fr) minmax(155px,.48fr);gap:8px}
+  .gameColumn{grid-column:1;grid-row:1;min-height:0;display:flex;flex-direction:column}
+  .gameColumn .fieldShell,.gameColumn:not(:has(.feedback)) .fieldShell{flex:1;min-height:0;height:auto;width:100%;max-width:none;max-height:none;aspect-ratio:auto;margin:0}
+  .gameColumn .fieldShell svg{height:100%;width:100%;min-height:0}
+  .insightsColumn{grid-column:1;grid-row:2;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .insightsColumn .feedback,.insightsColumn .playHistory{min-height:0;max-height:none;margin:0;overflow:auto;padding:6px}
+  .insightsColumn .feedback{height:100%;max-height:none}.insightsColumn .playHistory{height:100%}
+  .insightsColumn .feedback>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin:3px 0}.insightsColumn .feedback span{padding:3px;font-size:10px}.insightsColumn .feedback p{font-size:9px;line-height:1.2}
+  .insightsColumn .playHistoryList{max-height:none}.insightsColumn .playHistoryItem{grid-template-columns:23px 1fr 1fr;gap:3px;font-size:9px}.insightsColumn .playHistoryItem span:last-child{grid-column:2/-1}
+  .coach{grid-column:2;grid-row:1/-1;height:100%;min-height:0;max-height:none;display:flex;flex-direction:column;overflow:hidden}
+  .coach .folderList{flex:1;min-height:0;overflow:hidden}.coach .folder{height:100%;min-height:0;display:flex;flex-direction:column}.coach .folder .callList{flex:1;min-height:0;max-height:none;height:auto;overflow:auto;grid-template-columns:1fr}
+}
+@media (max-width:699px){
+  .app{height:100dvh;min-height:0;display:grid;grid-template-rows:50px minmax(0,1fr) 28px;overflow:hidden}
+  main{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:6px;padding:6px 9px}
+  .scoreboard{margin:0}.layout{height:100%;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:minmax(135px,1fr) 180px 230px;gap:6px;overflow:hidden}
+  .gameColumn{grid-column:1;grid-row:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .gameColumn .fieldShell,.gameColumn:not(:has(.feedback)) .fieldShell{height:auto;min-height:0;max-height:none;max-width:none;min-width:0;aspect-ratio:auto;flex:1;width:100%;margin:0}
+  .gameColumn .fieldShell svg{height:100%;width:100%;min-height:0}
+  .insightsColumn{grid-column:1;grid-row:2;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:4px}
+  .insightsColumn .feedback,.insightsColumn .playHistory{min-height:0;max-height:none;margin:0;overflow:auto;padding:4px}
+  .insightsColumn .feedback{height:auto;max-height:108px}.insightsColumn .playHistory{height:100%}
+  .insightsColumn .feedback>b{font-size:13px}.insightsColumn .feedback>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;margin:3px 0}.insightsColumn .feedback span{font-size:9px;padding:2px}.insightsColumn .feedback span small{font-size:6px}.insightsColumn .feedback p{font-size:8px;line-height:1.15;margin:3px 0}
+  .insightsColumn .playHistory h2{font-size:13px;margin:0}.insightsColumn .playHistoryList{max-height:none}.insightsColumn .playHistoryItem{grid-template-columns:20px 1fr 1fr;gap:2px;padding:3px 0;font-size:8px}.insightsColumn .playHistoryItem span:last-child{grid-column:2/-1}
+  .coach{grid-column:1;grid-row:3;height:100%;min-height:0;max-height:none;overflow:hidden;display:flex;flex-direction:column}
+  .coach .folderList{flex:1;min-height:0;overflow:hidden}.coach .folder{height:100%;min-height:0;display:flex;flex-direction:column}.coach .folder .callList{height:auto;flex:1;min-height:0;max-height:none;overflow:auto;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .coach .folder .call{min-height:38px}.coach .miniDiagram{width:34px;height:27px}
+  footer{padding:5px 9px}
+}
+@media (max-width:900px) and (max-height:600px) and (orientation:landscape){
+  .app{grid-template-rows:38px minmax(0,1fr) 20px}
+  main{grid-template-rows:60px minmax(0,1fr);gap:4px;padding:4px 8px}
+  .layout{grid-template-columns:minmax(0,1fr) 280px;grid-template-rows:minmax(0,1fr) 80px;gap:4px}
+  .gameColumn{grid-column:1;grid-row:1;min-height:0}
+  .insightsColumn{grid-column:1;grid-row:2;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:3px}
+  .insightsColumn .feedback{max-height:40px}.insightsColumn .playHistory{height:100%}
+  .coach{grid-column:2;grid-row:1/-1;height:100%;max-height:none}
+  .coach .folder .callList{max-height:none}
+}
