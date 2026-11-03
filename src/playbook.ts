@@ -12,6 +12,12 @@ export const defenseGroups:FormationGroup[]=[
   {id:'zone',name:'Zone Coverage',plays:['cover2','cover3','cover4']},
   {id:'pressure',name:'Blitz',plays:['samBlitz','nickelBlitz']}
 ]
+// A coaching lens over the existing calls: run selections put a fitter near
+// the box, while pass selections retain the full coverage and pressure menu.
+export const defenseBrowse={
+  run:{man:['cover0'],zone:['cover3'],blitz:['samBlitz']},
+  pass:{man:['cover0','cover1'],zone:['cover2','cover3','cover4'],blitz:['samBlitz','nickelBlitz']}
+} as const
 const O=(id:string,name:string,kind:'run'|'pass',formation:string,description:string,risk:number,base:number,counter:string[],concept:string,target?:string):PlaySpec=>({id,name,kind,formation,description,risk,base,counter,concept,target})
 export const offensivePlays:PlaySpec[]=[
   O('sbInside','Inside Zone','run','Singleback','Zone steps inside; cut behind the double team.',1,4,['d43Sam','d34Inside'],'inside-zone','A-right'),

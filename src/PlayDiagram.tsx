@@ -11,14 +11,16 @@ function paths(matchup:Matchup,x:(yard:number)=>number,y:(lateral:number)=>numbe
 
 function Arrow(){return <defs><marker id="assignmentArrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 6 3 0 6Z" fill="#f8d276"/></marker></defs>}
 
-export function MiniPlayDiagram({matchup}:{matchup:Matchup}){
+export function MiniPlayDiagram({matchup,side='offense'}:{matchup:Matchup;side?:'offense'|'defense'}){
   const los=matchup.offense.find(p=>p.position==='C')?.field.yard??matchup.offense[0].field.yard
   const x=(yard:number)=>38+(yard-los)*1.4
   const y=(lateral:number)=>30+lateral*.78
-  return <svg className="miniDiagram" viewBox="0 0 76 60" role="img" aria-label={`${matchup.formation.name} offensive alignment and assignments`}>
+  const defending=side==='defense'
+  const players=defending?matchup.defense:matchup.offense
+  return <svg className="miniDiagram" viewBox="0 0 76 60" role="img" aria-label={defending?`${matchup.look.name} defensive alignment and assignments`:`${matchup.formation.name} offensive alignment and assignments`}>
     <rect width="76" height="60" fill="#28533e"/><path d="M38 0V60" stroke="#8ccbd5" strokeDasharray="2 2"/>
-    <Arrow/>{paths(matchup,x,y)}
-    {matchup.offense.map(p=><rect key={p.id} x={x(p.field.yard)-1.5} y={y(p.field.lateral)-1.5} width="3" height="3" fill={teamVisuals[p.team].primary} stroke={teamVisuals[p.team].secondary} strokeWidth=".5"/>)}
+    {defending?<>{matchup.offense.map(p=><rect key={p.id} x={x(p.field.yard)-1} y={y(p.field.lateral)-1} width="2" height="2" fill="#b7c7a8" opacity=".45"/>)}{players.map(p=>{const kind=p.assignment.kind;const rush=['blitz','passRush','runGap','edgeContain'].includes(kind);const cover=['zone','deepSafety','man'].includes(kind);if(!rush&&!cover)return null;const dx=rush?-7:kind==='deepSafety'?7:4;const dy=kind==='man'?0:Math.sign(p.field.lateral)*1.5;return <path key={`${p.id}-path`} d={`M${x(p.field.yard)} ${y(p.field.lateral)}l${dx} ${dy}`} stroke={rush?'#f8d276':'#8cd6e4'} strokeWidth="1.2" fill="none"/>})}</>:<><Arrow/>{paths(matchup,x,y)}</>}
+    {players.map(p=><rect key={p.id} x={x(p.field.yard)-1.5} y={y(p.field.lateral)-1.5} width="3" height="3" fill={teamVisuals[p.team].primary} stroke={teamVisuals[p.team].secondary} strokeWidth=".5"/>)}
   </svg>
 }
 

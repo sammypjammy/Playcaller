@@ -238,3 +238,8 @@ main{padding:12px 22px 32px}
   .app{grid-template-rows:minmax(0,1fr) 20px}
   .scoreboard{min-height:58px;max-height:58px}
 }
+.defenseModes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.defenseModes button{min-width:0;font-size:13px;white-space:nowrap}
+.defenseModes button:nth-child(3){grid-column:1/-1}
+.coach .folder .callList{align-content:start;grid-auto-rows:min-content}
+@media (max-width:699px){.defenseModes button{font-size:11px}}

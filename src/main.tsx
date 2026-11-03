@@ -4,7 +4,7 @@ import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, clockText
 import FieldView from './FieldView'
 import { MiniPlayDiagram } from './PlayDiagram'
 import { assignmentEdge, buildMatchup, buildSpecialMatchup, offensiveFormations, type Matchup } from './football'
-import { defenseById, defenseGroups, defensiveLookForCall, fakePlays, offenseGroupFor, offenseGroups, offenseById, specialGroups, specialResponses } from './playbook'
+import { defenseBrowse, defenseById, defenseGroups, defensiveLookForCall, fakePlays, offenseGroupFor, offenseGroups, offenseById, specialGroups, specialResponses } from './playbook'
 import { durationFor, flowReducer, initialFlow, isPlaying, isSelectionPhase, isSnapReady } from './flow'
 import { executionNote } from './strategy'
 import { buildReplay } from './replay'
@@ -44,6 +44,8 @@ function App(){
   const [defLook,setDefLook]=useState('zone')
   const [browseView,setBrowseView]=useState<'formation'|'type'>('formation')
   const [playType,setPlayType]=useState<'run'|'pass'>('run')
+  const [defenseFocus,setDefenseFocus]=useState<'run'|'pass'|'special'>('pass')
+  const [defenseStyle,setDefenseStyle]=useState<'man'|'zone'|'blitz'>('zone')
   const [info,setInfo]=useState<string|null>(null)
   const debug=new URLSearchParams(window.location.search).has('debug')
   const [liveMatchup,setLiveMatchup]=useState<Matchup|null>(null)
@@ -53,10 +55,12 @@ function App(){
   const specialTransition=useRef(false)
   const snapLock=useRef(false)
   const selection:CallCard[]=g.possession==='home'?[...offense,...(g.down===4?offensiveSpecial:[])]:[...defense,...(g.down===4?defensiveSpecial:[])]
-  const group=g.possession==='home'?offenseGroups.find(x=>x.id===offFormation)!:defenseGroups.find(x=>x.id===defLook)!
+  const group=offenseGroups.find(x=>x.id===offFormation)!
   const predictedKick=opponentSpecial(g)
+  const activeDefenseFocus=defenseFocus==='special'&&!predictedKick?'pass':defenseFocus
+  const defenseIds:readonly string[]=activeDefenseFocus==='special'?defensiveSpecial.filter(p=>p.id.startsWith(predictedKick??'')).map(p=>p.id):defenseBrowse[activeDefenseFocus][defenseStyle]
   const allowedSpecial=g.down===4&&isSpecial(g.selected)&&(g.possession==='home'?!(g.selected==='fieldGoal'||g.selected.startsWith('fakeFG'))||100-g.yard+17<=60:!!predictedKick&&g.selected.startsWith(predictedKick))
-  const chosen=selection.some(p=>p.id===g.selected)&&(group.plays.includes(g.selected)||allowedSpecial)?g.selected:group.plays[0]
+  const chosen=selection.some(p=>p.id===g.selected)&&(g.possession==='home'?group.plays.includes(g.selected)||allowedSpecial:defenseIds.includes(g.selected))?g.selected:g.possession==='home'?group.plays[0]:defenseIds[0]??'cover3'
   const infoPlay=selection.find(p=>p.id===info)
   const selectedFormation=offensiveFormations.find(f=>f.id===offFormation)!
   const selectedPersonnel=selectedFormation.defaultPersonnel
@@ -72,8 +76,8 @@ function App(){
   },[g.possession,g.yard,g.seed,g.down,chosen,selectedFormation.id,selectedPersonnel,defLook])
   const matchup=isPlaying(flow.phase)&&liveMatchup?liveMatchup:previewMatchup
   const availableSpecial=g.down===4?specialGroups.filter(x=>x.id!=='fieldGoal'||100-g.yard+17<=60):[]
-  const categoryOptions=g.possession==='home'?[...offenseGroups,...availableSpecial]:[...defenseGroups,...(predictedKick?[{id:predictedKick,name:predictedKick==='punt'?'Punt Response':'Field Goal Response',plays:defensiveSpecial.filter(p=>p.id.startsWith(predictedKick)).map(p=>p.id)}]:[])]
-  const visibleCalls:CallCard[]=g.possession==='home'&&browseView==='type'?offense.filter(p=>p.kind===playType):g.possession==='home'&&availableSpecial.some(s=>s.id===folder)?offensiveSpecial.filter(p=>categoryOptions.find(x=>x.id===folder)?.plays.includes(p.id)):selection.filter(p=>categoryOptions.find(x=>x.id===folder)?.plays.includes(p.id))
+  const categoryOptions=[...offenseGroups,...availableSpecial]
+  const visibleCalls:CallCard[]=g.possession==='away'?selection.filter(p=>defenseIds.includes(p.id)):browseView==='type'?offense.filter(p=>p.kind===playType):availableSpecial.some(s=>s.id===folder)?offensiveSpecial.filter(p=>categoryOptions.find(x=>x.id===folder)?.plays.includes(p.id)):selection.filter(p=>categoryOptions.find(x=>x.id===folder)?.plays.includes(p.id))
   const situation=g.phase==='final'?'FINAL':g.conversion?g.conversion.mode==='two'?'2-POINT TRY':'EXTRA POINT':`${g.down}${g.down===1?'ST':g.down===2?'ND':g.down===3?'RD':'TH'} & ${g.toGo}`
   const flipBook=(side:keyof Book,id:string)=>{setBook(old=>{const list=old[side];const next={...old,[side]:list.includes(id)?list.filter(x=>x!==id):[...list,id]};localStorage.setItem('playcaller-book-v2',JSON.stringify(next));return next})}
   const choosePlay=(id:string)=>{
@@ -172,6 +176,7 @@ function App(){
   },[flow.phase,flow.revision,speed])
   useEffect(()=>{if(g.conversion?.stage==='choice'&&g.conversion.team==='away'&&flow.phase==='HUDDLE'){const mode=chooseAIConversion(g);if(mode==='pat')kickPAT(g);else setG(chooseConversion(g,'two'))}},[g.conversion?.stage,g.snap,flow.phase])
   useEffect(()=>{if(g.phase!=='select'||g.conversion)return;setPlayClock(40);const timer=setInterval(()=>setPlayClock(n=>Math.max(0,n-1)),1000);return()=>clearInterval(timer)},[g.snap,g.phase,g.conversion?.stage])
+  useEffect(()=>{if(defenseFocus==='special'&&!predictedKick)setDefenseFocus('pass')},[defenseFocus,predictedKick])
   useEffect(()=>{if(g.down!==4&&(folder==='punt'||folder==='fieldGoal'))setFolder(g.possession==='home'?offFormation:defLook)},[folder,g.down,g.possession,offFormation,defLook])
   useEffect(()=>{setFolder(g.possession==='home'?(browseView==='type'?playType:offFormation):defLook)},[g.possession,browseView,playType])
   const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setPlayClock(40);setG(fresh());dispatch('RESET')}
@@ -188,7 +193,7 @@ function App(){
     const next:Record<string,Matchup>={}
     visibleCalls.forEach(p=>{next[p.id]=diagramFor(p)})
     return next
-  },[folder,browseView,playType,g.possession,g.yard,g.seed,g.down,g.snap,offFormation,defLook])
+  },[folder,browseView,playType,defenseFocus,defenseStyle,g.possession,g.yard,g.seed,g.down,g.snap,offFormation,defLook])
   const fieldGame=isPlaying(flow.phase)&&pending.current?{
     ...pending.current.before,phase:'animating' as const,
     last:pending.current.kind==='normal'?pending.current.result:pending.current.next.last,
@@ -209,10 +214,11 @@ function App(){
       <aside className="coach">
         {g.phase==='final'?<div className="finalPanel"><span>FINAL SCORE</span><strong>{g.score.home} – {g.score.away}</strong><p>{g.score.home===g.score.away?'The exhibition ends in a tie.':g.score.home>g.score.away?'The Foundry take the win.':'The Breakers take the win.'}</p><button className="primary" onClick={restart}>PLAY AGAIN ↗</button></div>:g.conversion?.stage==='choice'?<div className="conversionPanel"><span className="eyebrow">TOUCHDOWN! +6</span><h1>Extra Point</h1><p>Choose how to finish the score.</p><div><button className="primary" disabled={flow.phase!=='HUDDLE'||g.conversion.team!=='home'} onClick={()=>selectExtraPoint('pat')}>KICK PAT</button><button className="primary" disabled={flow.phase!=='HUDDLE'||g.conversion.team!=='home'} onClick={()=>selectExtraPoint('two')}>GO FOR 2</button></div></div>:g.conversion?.stage==='result'||g.conversion?.mode==='pat'&&g.phase==='animating'?<div className="conversionPanel"><span className="eyebrow">EXTRA POINT</span><h1>{g.conversion.result??'PAT IN FLIGHT'}</h1></div>:<>
           <div className="callHead"><div><span className="eyebrow">{g.possession==='home'?'OFFENSE':'DEFENSE'}{g.conversion?.mode==='two'?' · TWO-POINT TRY':''}</span><h1>Choose a call</h1></div><button className="primary callSnap" disabled={!isSnapReady(flow.phase)||g.phase!=='select'} onClick={start}>SNAP ↗</button></div>
-          {g.possession==='home'&&<div className="browseModes"><button className={browseView==='formation'?'active':''} onClick={()=>setBrowseView('formation')}>FORMATION VIEW</button><button className={browseView==='type'?'active':''} onClick={()=>setBrowseView('type')}>PLAY TYPE VIEW</button>{browseView==='type'&&<div className="typeTabs"><button className={playType==='run'?'active':''} onClick={()=>setPlayType('run')}>RUN</button><button className={playType==='pass'?'active':''} onClick={()=>setPlayType('pass')}>PASS</button></div>}</div>}
-          {(g.possession==='away'||browseView==='formation')&&<div className="formationPicker"><label>{g.possession==='home'?'FORMATION / SPECIAL TEAMS':'DEFENSIVE CATEGORY'}<select value={folder} disabled={!isSelectionPhase(flow.phase)} onChange={e=>{const id=e.target.value;setFolder(id);const first=categoryOptions.find(x=>x.id===id)?.plays[0];if(first)choosePlay(first)}}>{categoryOptions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>}
-          <div className="folderList"><div className="folder"><div className="callList">{visibleCalls.map(p=><div className="callRow" key={p.id}><button disabled={!isSelectionPhase(flow.phase)} className={`call ${chosen===p.id?'selected':''}`} onClick={()=>choosePlay(p.id)}><MiniPlayDiagram matchup={miniMatchups[p.id]??previewMatchup}/><span className="callText"><strong>{p.name}</strong><small>{p.formation.toUpperCase()} · {p.kind.toUpperCase()} · {p.description}</small></span>{(g.possession==='home'?book.offense:book.defense).includes(p.id)&&<span className="favorite" aria-label="Favorite call">★</span>}<span className="chevron">›</span></button><button className="infoButton" aria-label={`Learn about ${p.name}`} onClick={()=>setInfo(p.id)}>ⓘ</button></div>)}</div></div></div>
-          {infoPlay&&<div className="playInfo" role="region" aria-label={`${infoPlay.name} strategy`}><div><b>{infoPlay.name}</b><button onClick={()=>setInfo(null)} aria-label="Close play information">×</button></div><small>{infoPlay.formation} · {infoPlay.kind.toUpperCase()}</small><MiniPlayDiagram matchup={miniMatchups[infoPlay.id]??diagramFor(infoPlay)}/><p>{infoPlay.description}</p><p><b>USE IT:</b> {infoPlay.situation??'When field position and down make the risk worthwhile.'}</p><p><b>STRENGTH:</b> {infoPlay.strength??'Can catch an aggressive opponent off guard.'}</p><p><b>WATCH FOR:</b> {infoPlay.weakness??'A prepared opponent can limit the gain.'}</p></div>}
+          {g.possession==='home'?<div className="browseModes"><button className={browseView==='formation'?'active':''} onClick={()=>setBrowseView('formation')}>FORMATION VIEW</button><button className={browseView==='type'?'active':''} onClick={()=>setBrowseView('type')}>PLAY TYPE VIEW</button>{browseView==='type'&&<div className="typeTabs"><button className={playType==='run'?'active':''} onClick={()=>setPlayType('run')}>RUN</button><button className={playType==='pass'?'active':''} onClick={()=>setPlayType('pass')}>PASS</button></div>}</div>:<div className="browseModes defenseModes"><button className={activeDefenseFocus==='run'?'active':''} disabled={!isSelectionPhase(flow.phase)} onClick={()=>{setDefenseFocus('run');const ids=defenseBrowse.run[defenseStyle];if(!ids.some(id=>id===g.selected))choosePlay(ids[0])}}>RUN DEFENSE</button><button className={activeDefenseFocus==='pass'?'active':''} disabled={!isSelectionPhase(flow.phase)} onClick={()=>{setDefenseFocus('pass');const ids=defenseBrowse.pass[defenseStyle];if(!ids.some(id=>id===g.selected))choosePlay(ids[0])}}>PASS DEFENSE</button>{predictedKick&&<button className={activeDefenseFocus==='special'?'active':''} disabled={!isSelectionPhase(flow.phase)} onClick={()=>{setDefenseFocus('special');const first=defensiveSpecial.find(p=>p.id.startsWith(predictedKick));if(first)choosePlay(first.id)}}>SPECIAL TEAMS</button>}</div>}
+          {g.possession==='home'&&browseView==='formation'&&<div className="formationPicker"><label>FORMATION / SPECIAL TEAMS<select value={folder} disabled={!isSelectionPhase(flow.phase)} onChange={e=>{const id=e.target.value;setFolder(id);const first=categoryOptions.find(x=>x.id===id)?.plays[0];if(first)choosePlay(first)}}>{categoryOptions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>}
+          {g.possession==='away'&&activeDefenseFocus!=='special'&&<div className="formationPicker"><label>DEFENSIVE STYLE<select value={defenseStyle} disabled={!isSelectionPhase(flow.phase)} onChange={e=>{const style=e.target.value as 'man'|'zone'|'blitz';setDefenseStyle(style);const ids=defenseBrowse[activeDefenseFocus][style];if(!ids.some(id=>id===g.selected))choosePlay(ids[0])}}><option value="man">Man Coverage</option><option value="zone">Zone Coverage</option><option value="blitz">Blitz</option></select></label></div>}
+          <div className="folderList"><div className="folder"><div className="callList">{visibleCalls.map(p=><div className="callRow" key={p.id}><button disabled={!isSelectionPhase(flow.phase)} className={`call ${chosen===p.id?'selected':''}`} onClick={()=>choosePlay(p.id)}><MiniPlayDiagram matchup={miniMatchups[p.id]??previewMatchup} side={g.possession==='away'?'defense':'offense'}/><span className="callText"><strong>{p.name}</strong><small>{p.formation.toUpperCase()} · {p.kind.toUpperCase()} · {p.description}</small></span>{(g.possession==='home'?book.offense:book.defense).includes(p.id)&&<span className="favorite" aria-label="Favorite call">★</span>}<span className="chevron">›</span></button><button className="infoButton" aria-label={`Learn about ${p.name}`} onClick={()=>setInfo(p.id)}>ⓘ</button></div>)}</div></div></div>
+          {infoPlay&&<div className="playInfo" role="region" aria-label={`${infoPlay.name} strategy`}><div><b>{infoPlay.name}</b><button onClick={()=>setInfo(null)} aria-label="Close play information">×</button></div><small>{infoPlay.formation} · {infoPlay.kind.toUpperCase()}</small><MiniPlayDiagram matchup={miniMatchups[infoPlay.id]??diagramFor(infoPlay)} side={g.possession==='away'?'defense':'offense'}/><p>{infoPlay.description}</p><p><b>USE IT:</b> {infoPlay.situation??'When field position and down make the risk worthwhile.'}</p><p><b>STRENGTH:</b> {infoPlay.strength??'Can catch an aggressive opponent off guard.'}</p><p><b>WATCH FOR:</b> {infoPlay.weakness??'A prepared opponent can limit the gain.'}</p></div>}
         </>}
       </aside></div>
     </main><footer><span>PLAYCALLER / PROTOTYPE 01</span><span>FICTIONAL TEAMS · EXHIBITION FOOTBALL</span><div className="footerActions"><button onClick={()=>setEdit(true)}>MY FAVORITES</button><button onClick={restart}>NEW GAME ↻</button></div></footer>
