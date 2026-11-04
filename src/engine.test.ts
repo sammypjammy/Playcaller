@@ -8,13 +8,16 @@ test('each selected team draws one of the other three and keeps its identity thr
     assert.equal(new Set(opponents).size,3)
     assert.ok(opponents.every(id=>id!==selected))
     for(const opponent of opponents){
-      const g=openingKickoff(fresh(9,selected,opponent),'away')
-      assert.equal(team('home',g).short,teams[selected].short)
-      assert.match(g.log[0],new RegExp(team('away',g).short))
-      const half=finish({...g,quarter:2,seconds:1},{yards:0,text:'No gain.',offense:'sbInside',defense:'cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29},10)
-      assert.equal(half.homeTeamId,selected)
-      assert.equal(half.awayTeamId,opponent)
-      assert.match(half.log[0],new RegExp(team('home',half).short))
+      for(const receiver of ['home','away'] as const){
+        const g=openingKickoff(fresh(9,selected,opponent),receiver)
+        assert.equal(team('home',g).short,teams[selected].short)
+        assert.equal(team('away',g).short,teams[opponent].short)
+        assert.match(g.log[0],new RegExp(team(receiver,g).short))
+        const half=finish({...g,quarter:2,seconds:1},{yards:0,text:'No gain.',offense:'sbInside',defense:'cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29},10)
+        assert.equal(half.homeTeamId,selected)
+        assert.equal(half.awayTeamId,opponent)
+        assert.match(half.log[0],new RegExp(team(receiver==='home'?'away':'home',half).short))
+      }
     }
   }
 })

@@ -205,7 +205,7 @@ function App(){
   useEffect(()=>{setFolder(g.possession==='home'?(browseView==='type'?playType:offFormation):defLook)},[g.possession,browseView,playType])
   const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;halftimeSeen.current=false;setHalftimeShow(false);setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setPlayClock(40);setCoinToss(true);setTeamChosen(false);setG(fresh());dispatch('RESET')}
   const selectTeam=(id:TeamId)=>{const random=crypto.getRandomValues(new Uint32Array(2));const opponent=opponentFor(id,random[1]/4294967296);setG(fresh(random[0],id,opponent));setTeamChosen(true)}
-  const beginGame=(receiver:'home'|'away')=>{setG(openingKickoff(fresh(),receiver));setCoinToss(false);setDefenseFocus('pass');setFolder(offFormation);dispatch('RESET')}
+  const beginGame=(receiver:'home'|'away')=>{setG(openingKickoff(g,receiver));setCoinToss(false);setDefenseFocus('pass');setFolder(offFormation);dispatch('RESET')}
   const feedbackOffense=offenseById(g.last?.offense??'')?.name??offensiveSpecial.find(p=>p.id===g.last?.offense)?.name??g.last?.offense
   const feedbackDefense=defenseById(g.last?.defense??'')?.name??specialResponses.find(p=>p.id===g.last?.defense)?.name??g.last?.defense
   const diagramFor=(p:CallCard):Matchup=>{
