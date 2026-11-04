@@ -34,6 +34,15 @@ function resultLabel(pending:PendingPlay|null){
   if(r.yards<0)return `${name} — LOSS OF ${Math.abs(r.yards)}`
   return `${name} — ${r.yards} YARD ${r.offense.startsWith('fake')||offenseById(r.offense)?.kind==='pass'?'COMPLETION':'GAIN'}`
 }
+function HalftimeShow({home,away,receiver}: {home:number;away:number;receiver:string}){
+  return <div className="halftimeShow" role="status" aria-live="assertive" aria-label={`Halftime. Iron City ${home}, Bayport ${away}. ${receiver} receives the second half kickoff.`}>
+    <div className="halftimeSky" aria-hidden="true">
+      {[0,1,2].map(i=><div className={`firework firework${i+1}`} key={i}><i className="fireworkTrail"/>{Array.from({length:8},(_,ray)=><i className="fireworkRay" key={ray}/>)}</div>)}
+      <div className="bannerFlight"><svg className="halftimePlane" viewBox="0 0 110 54" aria-hidden="true"><path d="M5 25h37L59 4h15l-8 21h26l12 5-12 5H66l8 15H59L42 35H5L1 30z" fill="#f3dc9a" stroke="#183c35" strokeWidth="3"/><path d="M48 25h25M48 35h25" stroke="#b45938" strokeWidth="3"/><circle cx="25" cy="30" r="4" fill="#b45938"/></svg><span className="bannerRope"/><span className="halftimeBanner">SECOND HALF · LET'S PLAY!</span></div>
+    </div>
+    <div className="halftimeMessage"><small>THE BAND IS LEAVING THE FIELD</small><strong>HALFTIME</strong><span>IRON CITY {home} <b>–</b> {away} BAYPORT</span><em>{receiver.toUpperCase()} RECEIVES THE SECOND HALF KICKOFF</em></div>
+  </div>
+}
 function App(){
   const [g,setG]=useState<Game>(()=>fresh())
   const [coinToss,setCoinToss]=useState(true)
@@ -42,6 +51,8 @@ function App(){
   const speed=new URLSearchParams(window.location.search).has('quick')
   const [flow,dispatch]=useReducer(flowReducer,initialFlow)
   const [progress,setProgress]=useState(0)
+  const [halftimeShow,setHalftimeShow]=useState(false)
+  const halftimeSeen=useRef(false)
   const [folder,setFolder]=useState('singleDoubles')
   const [offFormation,setOffFormation]=useState('singleDoubles')
   const [defLook,setDefLook]=useState('zone')
@@ -89,7 +100,7 @@ function App(){
   const kickoffTitle=coinToss?'COIN TOSS':g.phase==='select'&&g.snap===0?`OPENING KICKOFF · ${team(g.possession).short} RECEIVES`:g.phase==='select'&&g.quarter===3&&g.seconds===180&&g.log[0]?.startsWith('Halftime kickoff')?`HALFTIME KICKOFF · ${team(g.possession).short} RECEIVES`:null
   const flipBook=(side:keyof Book,id:string)=>{setBook(old=>{const list=old[side];const next={...old,[side]:list.includes(id)?list.filter(x=>x!==id):[...list,id]};localStorage.setItem('playcaller-book-v2',JSON.stringify(next));return next})}
   const choosePlay=(id:string)=>{
-    if(coinToss||!isSelectionPhase(flow.phase)||g.phase==='final'||(g.conversion&&g.conversion.stage!=='pick'))return
+    if(coinToss||halftimeShow||!isSelectionPhase(flow.phase)||g.phase==='final'||(g.conversion&&g.conversion.stage!=='pick'))return
     const formation=offenseGroupFor(id)
     const category=defenseGroups.find(x=>x.plays.includes(id))
     if(formation)setOffFormation(formation.id)
@@ -117,7 +128,7 @@ function App(){
     else setG(chooseConversion(g,'two'))
   }
   const start=()=>{
-    if(coinToss||!isSnapReady(flow.phase)||g.phase!=='select'||snapLock.current||g.conversion?.stage==='choice')return
+    if(coinToss||halftimeShow||!isSnapReady(flow.phase)||g.phase!=='select'||snapLock.current||g.conversion?.stage==='choice')return
     snapLock.current=true
     if(g.conversion){
       if(g.conversion.mode!=='two'||g.conversion.stage!=='pick')return
@@ -184,11 +195,12 @@ function App(){
     return()=>{active=false;cancelAnimationFrame(frame)}
   },[flow.phase,flow.revision,speed])
   useEffect(()=>{if(g.conversion?.stage==='choice'&&g.conversion.team==='away'&&flow.phase==='HUDDLE'){const mode=chooseAIConversion(g);if(mode==='pat')kickPAT(g);else setG(chooseConversion(g,'two'))}},[g.conversion?.stage,g.snap,flow.phase])
-  useEffect(()=>{if(coinToss||g.phase!=='select'||g.conversion)return;setPlayClock(40);const timer=setInterval(()=>setPlayClock(n=>Math.max(0,n-1)),1000);return()=>clearInterval(timer)},[coinToss,g.snap,g.phase,g.conversion?.stage])
+  useEffect(()=>{if(halftimeSeen.current||flow.phase!=='HUDDLE'||g.quarter!==3||g.seconds!==180||!g.log[0]?.startsWith('Halftime kickoff'))return;halftimeSeen.current=true;setHalftimeShow(true);const timer=setTimeout(()=>setHalftimeShow(false),5600);return()=>clearTimeout(timer)},[flow.phase,g.quarter,g.seconds,g.log])
+  useEffect(()=>{if(coinToss||halftimeShow||g.phase!=='select'||g.conversion)return;setPlayClock(40);const timer=setInterval(()=>setPlayClock(n=>Math.max(0,n-1)),1000);return()=>clearInterval(timer)},[coinToss,halftimeShow,g.snap,g.phase,g.conversion?.stage])
   useEffect(()=>{if(defenseFocus==='special'&&!predictedKick)setDefenseFocus('pass')},[defenseFocus,predictedKick])
   useEffect(()=>{if(g.conversion?.mode==='two'&&g.conversion.stage==='pick'&&playType==='special')setPlayType('run')},[g.conversion?.stage,g.conversion?.mode,playType])
   useEffect(()=>{setFolder(g.possession==='home'?(browseView==='type'?playType:offFormation):defLook)},[g.possession,browseView,playType])
-  const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setPlayClock(40);setCoinToss(true);setG(fresh());dispatch('RESET')}
+  const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;halftimeSeen.current=false;setHalftimeShow(false);setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setPlayClock(40);setCoinToss(true);setG(fresh());dispatch('RESET')}
   const beginGame=(receiver:'home'|'away')=>{setG(openingKickoff(fresh(),receiver));setCoinToss(false);setDefenseFocus('pass');setFolder(offFormation);dispatch('RESET')}
   const feedbackOffense=offenseById(g.last?.offense??'')?.name??offensiveSpecial.find(p=>p.id===g.last?.offense)?.name??g.last?.offense
   const feedbackDefense=defenseById(g.last?.defense??'')?.name??specialResponses.find(p=>p.id===g.last?.defense)?.name??g.last?.defense
@@ -234,6 +246,7 @@ function App(){
     </main><footer><span>PLAYCALLER / PROTOTYPE 01</span><span>FICTIONAL TEAMS · EXHIBITION FOOTBALL</span><div className="footerActions"><button onClick={()=>setEdit(true)}>MY FAVORITES</button><button onClick={restart}>NEW GAME ↻</button></div></footer>
     {edit&&<div className="modalBackdrop" onClick={()=>setEdit(false)}><div className="modal" role="dialog" aria-modal="true" aria-label="Edit playbook" onClick={e=>e.stopPropagation()}><div className="modalHead"><div><span className="eyebrow">IRON CITY FOUNDRY</span><h2>Team favorites</h2></div><button onClick={()=>setEdit(false)} aria-label="Close">×</button></div><p>Star the calls you want to remember. Every active call stays playable.</p><div className="bookColumns">{(['offense','defense'] as const).map(side=><div key={side}><h3>{side.toUpperCase()}</h3>{(side==='offense'?offense:defense).map(p=><label key={p.id} className="bookItem"><input type="checkbox" checked={book[side].includes(p.id)} onChange={()=>flipBook(side,p.id)}/><span><b>{p.name}</b><small>{p.formation}</small></span></label>)}</div>)}</div><button className="primary" onClick={()=>setEdit(false)}>DONE ↗</button></div></div>}
     {infoPlay&&<div className="modalBackdrop playArtBackdrop" onClick={()=>setInfo(null)}><div className="playArtModal" role="dialog" aria-modal="true" aria-label={`${infoPlay.name} play art`} onClick={e=>e.stopPropagation()}><div className="playArtHeading"><div><small>{infoPlay.formation} · {infoPlay.kind.toUpperCase()}</small><h2>{infoPlay.name}</h2></div><button aria-label="Close play art" onClick={()=>setInfo(null)}>×</button></div><RetroPlayArt matchup={miniMatchups[infoPlay.id]??diagramFor(infoPlay)} side={g.possession==='away'?'defense':'offense'}/><details className="playArtExtra"><summary>COACH NOTES · {infoPlay.description}</summary><div className="playArtNotes"><p><b>USE IT:</b> {infoPlay.situation??'When field position and down make the risk worthwhile.'}</p><p><b>STRENGTH:</b> {infoPlay.strength??'Can catch an aggressive opponent off guard.'}</p><p><b>WATCH FOR:</b> {infoPlay.weakness??'A prepared opponent can limit the gain.'}</p></div></details></div></div>}
+    {halftimeShow&&<HalftimeShow home={g.score.home} away={g.score.away} receiver={team(g.possession).short}/>}
   </div>
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>)

@@ -300,3 +300,27 @@ main{padding:12px 22px 32px}
 .coinTossPanel small{font:800 10px monospace;color:#53695e}
 @keyframes coinHover{50%{transform:translateY(-5px) rotateY(18deg)}}
 @media(max-width:699px){.coinTossPanel{padding:9px;gap:5px}.coinFace{width:48px;height:48px;font-size:32px;border-width:4px}.coinTossPanel h1{font-size:22px}.coinTossPanel p{font-size:10px}.coinTossPanel .primary{min-height:28px;padding:3px;font-size:15px}.coinTossPanel small{font-size:8px}}
+/* Halftime show sits above the field and play controls until the second half is ready. */
+.halftimeShow{position:fixed;inset:0;z-index:30;overflow:hidden;display:grid;place-items:center;background:linear-gradient(180deg,#071b21e8,#153c36e8 62%,#091c1df2);color:#f6e9b6;font-family:'Barlow Condensed',sans-serif;text-align:center}
+.halftimeSky{position:absolute;inset:0;pointer-events:none}
+.halftimeMessage{position:relative;z-index:2;display:grid;gap:8px;justify-items:center;padding:26px 18px;background:#0a2427d9;border:3px solid #d4a65c;box-shadow:8px 8px 0 #071b20,0 0 0 7px #173f3c;max-width:min(580px,90vw);animation:halftimePop .55s steps(5,end) both}
+.halftimeMessage small{font:800 11px/1.2 monospace;letter-spacing:2px;color:#dcae69}
+.halftimeMessage strong{font:900 clamp(54px,12vw,108px)/.9 'Barlow Condensed',sans-serif;letter-spacing:5px;text-shadow:4px 4px #a5432e}
+.halftimeMessage span{font:800 clamp(19px,4vw,30px)/1.1 'Barlow Condensed',sans-serif;letter-spacing:2px}
+.halftimeMessage span b{color:#dd734e}
+.halftimeMessage em{font:800 11px/1.3 monospace;font-style:normal;letter-spacing:1px;color:#b9d7c2}
+.bannerFlight{position:absolute;top:10%;left:0;width:max-content;display:flex;align-items:center;animation:bannerFly 5.4s linear both;filter:drop-shadow(3px 5px 0 #091d21)}
+.halftimePlane{width:clamp(70px,12vw,110px);height:auto;flex:none}
+.bannerRope{width:clamp(18px,4vw,52px);border-top:2px solid #e7d8a2;transform:rotate(8deg);transform-origin:left center}
+.halftimeBanner{display:block;padding:7px 13px;border:3px solid #ead79d;background:#b34d34;color:#fff4c8;font:900 clamp(12px,2vw,19px)/1 'Barlow Condensed',sans-serif;letter-spacing:2px;white-space:nowrap;transform:rotate(2deg)}
+.firework{position:absolute;bottom:18%;width:2px;height:2px;animation:fireworkRise 2.1s ease-out var(--delay) both}
+.firework1{left:22%;--rise:50vh;--delay:.2s;color:#f6c46b}.firework2{left:72%;--rise:62vh;--delay:1.3s;color:#e87960}.firework3{left:48%;--rise:69vh;--delay:2.5s;color:#a9d5b2}
+.fireworkTrail{position:absolute;left:0;bottom:0;width:3px;height:55px;background:linear-gradient(transparent,currentColor);animation:fireworkTrail 2.1s ease-out var(--delay) both}
+.fireworkRay{position:absolute;left:0;top:0;width:2px;height:42px;transform-origin:center 0;background:linear-gradient(currentColor,transparent);opacity:0;animation:fireworkBurst 2.1s ease-out var(--delay) both}
+.fireworkRay:nth-of-type(2){rotate:0deg}.fireworkRay:nth-of-type(3){rotate:45deg}.fireworkRay:nth-of-type(4){rotate:90deg}.fireworkRay:nth-of-type(5){rotate:135deg}.fireworkRay:nth-of-type(6){rotate:180deg}.fireworkRay:nth-of-type(7){rotate:225deg}.fireworkRay:nth-of-type(8){rotate:270deg}.fireworkRay:nth-of-type(9){rotate:315deg}
+@keyframes halftimePop{from{opacity:0;transform:scale(.75)}to{opacity:1;transform:scale(1)}}
+@keyframes bannerFly{from{transform:translateX(-100%)}to{transform:translateX(100vw)}}
+@keyframes fireworkRise{0%{transform:translateY(0)}55%,100%{transform:translateY(calc(-1*var(--rise)))}}
+@keyframes fireworkTrail{0%,42%{opacity:0}50%{opacity:1}58%,100%{opacity:0}}
+@keyframes fireworkBurst{0%,53%{opacity:0;scale:.1}60%{opacity:1;scale:1}78%,100%{opacity:0;scale:1.5}}
+@media(prefers-reduced-motion:reduce){.bannerFlight,.firework,.fireworkTrail,.fireworkRay,.halftimeMessage{animation:none}.bannerFlight{left:50%;transform:translateX(-50%)}.firework{display:none}}
