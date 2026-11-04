@@ -9,7 +9,7 @@ export type Team = { name: string; short: string; color: string; accent: string;
 export type Result = { yards: number; text: string; offense: string; defense: string; turnover: boolean; touchdown: boolean; safety: boolean; firstDown: boolean; clock: number; event?:'run'|'completion'|'incomplete'|'sack'|'interception'|'fumble'; matchup?:MatchupRating; why?:string; replay?:ReplayPlan; conversionReturn?:boolean; returnerId?:string; punt?:{catchYard:number;endYard:number;returnYards:number;touchback:boolean} }
 export type PlayRecord = { snap: number; mine: string; theirs: string; outcome: string }
 export type Conversion = {team:Side;stage:'choice'|'pick'|'result';mode?:'pat'|'two';result?:string}
-export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
+export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; openingReceiver:Side; pendingPeriod?:2|3|4; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
 
 export const offense: Play[] = offensivePlays
 export const defense: Play[] = defensivePlays
@@ -20,7 +20,10 @@ export const team = (s: Side) => s === 'home' ? home : away
 export const clockText = (s: number) => `${Math.floor(Math.max(0,s)/60)}:${String(Math.max(0,s)%60).padStart(2,'0')}`
 export const fieldPosition = (yard: number) => yard === 50 ? '50' : yard < 50 ? `OWN ${yard}` : `OPP ${100-yard}`
 export const nextRandom = (seed: number): [number,number] => { const n = (Math.imul(seed,1664525)+1013904223)>>>0; return [n,n/4294967296] }
-export function fresh(seed = Date.now()>>>0): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',yard:25,down:1,toGo:10,score:{home:0,away:0},drive:1,snap:0,selected:'sbInside',log:['Opening kickoff: Iron City starts at its 25.'],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
+export function fresh(seed = Date.now()>>>0): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',openingReceiver:'home',yard:25,down:1,toGo:10,score:{home:0,away:0},drive:1,snap:0,selected:'sbInside',log:['Opening kickoff: Iron City starts at its 25.'],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
+export function openingKickoff(g:Game,receiver:Side):Game{
+  return {...g,possession:receiver,openingReceiver:receiver,yard:25,down:1,toGo:10,selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:[`Opening kickoff: ${team(receiver).short} receives at its 25.`]}
+}
 export function selectAI(g: Game): string {
   const pool = g.possession === 'home' ? defense : offense
   if(g.possession === 'away') {
@@ -64,22 +67,30 @@ export function resolve(g: Game, attackId: string, defendId: string, assignmentM
   const clock=incomplete?6:o.kind==='run'?29:19
   return {result:{yards,text,offense:o.id,defense:d.id,turnover,touchdown,safety,firstDown,clock,event,matchup:assessment.rating,why:assessment.why},seed}
 }
-function advanceClock(g:Game,elapsed:number) { let q=g.quarter,s=g.seconds-elapsed; while(s<=0 && q<4){q++;s+=180} return {quarter:q,seconds:Math.max(0,s),finished:q===4&&s<=0} }
+function advanceClock(g:Game,elapsed:number) {
+  const seconds=Math.max(0,g.seconds-elapsed)
+  return {quarter:g.quarter,seconds,finished:g.quarter===4&&seconds===0,nextQuarter:seconds===0&&g.quarter<4?(g.quarter+1) as 2|3|4:undefined}
+}
 function addLog(g:Game,line:string){return [line,...g.log].slice(0,12)}
+function startNextPeriod(g:Game,nextQuarter:2|3|4):Game{
+  if(nextQuarter!==3)return {...g,quarter:nextQuarter,seconds:180,pendingPeriod:undefined,log:addLog(g,`Quarter ${nextQuarter} begins.`)}
+  const receiver=other(g.openingReceiver)
+  return {...g,quarter:3,seconds:180,pendingPeriod:undefined,phase:'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,`Halftime kickoff: ${team(receiver).short} receives at its 25.`)}
+}
 export function finish(g:Game,result:Result,seed:number):Game {
   const time=advanceClock(g,result.clock), p=g.possession, opp=other(p)
   const offensiveName=offenseById(result.offense)?.name??result.offense
   const defensiveName=defenseById(result.defense)?.name??result.defense.replace(/([A-Z])/g,' $1').replace(/^./,x=>x.toUpperCase())
-  const base:Game={...g,phase:'select',seed,quarter:time.quarter,seconds:time.seconds,snap:g.snap+1,last:result,history:[{snap:g.snap+1,mine:p==='home'?offensiveName:defensiveName,theirs:p==='home'?defensiveName:offensiveName,outcome:result.text},...g.history],recent:[...g.recent,result.offense].slice(-5),ballStart:g.yard,ballEnd:Math.max(0,Math.min(100,g.yard+result.yards))}
+  const base:Game={...g,phase:'select',seed,quarter:time.quarter,seconds:time.seconds,pendingPeriod:undefined,snap:g.snap+1,last:result,history:[{snap:g.snap+1,mine:p==='home'?offensiveName:defensiveName,theirs:p==='home'?defensiveName:offensiveName,outcome:result.text},...g.history],recent:[...g.recent,result.offense].slice(-5),ballStart:g.yard,ballEnd:Math.max(0,Math.min(100,g.yard+result.yards))}
   const call=`${team(p).short} ${offensiveName} vs ${defensiveName}: ${result.text}`
   base.log=addLog(g,call)
-  if(result.touchdown){base.score={...g.score,[p]:g.score[p]+6};base.log=addLog({...g,log:base.log},`${team(p).short} touchdown! (+6) Choose an extra-point attempt.`);base.conversion={team:p,stage:'choice'};base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
+  if(result.touchdown){base.score={...g.score,[p]:g.score[p]+6};base.log=addLog({...g,log:base.log},`${team(p).short} touchdown! (+6) Choose an extra-point attempt.`);base.conversion={team:p,stage:'choice'};base.pendingPeriod=time.nextQuarter;base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
   else if(result.safety){base.score={...g.score,[opp]:g.score[opp]+2};base.possession=opp;base.yard=25;base.down=1;base.toGo=10;base.drive++;base.recent=[]}
   else if(result.turnover){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[]}
   else if(g.down===4&&!result.firstDown){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[];base.log=addLog({...g,log:base.log},'Turnover on downs.')}
   else {base.yard=Math.max(1,Math.min(99,g.yard+result.yards));base.down=result.firstDown?1:g.down+1;base.toGo=result.firstDown?Math.min(10,100-base.yard):Math.max(1,g.toGo-result.yards)}
   if(time.finished&&!base.conversion){base.phase='final';base.log=addLog({...g,log:base.log},'Final whistle.')} 
-  return base
+  return time.nextQuarter&&!base.conversion?startNextPeriod(base,time.nextQuarter):base
 }
 
 export function chooseAIConversion(g:Game):'pat'|'two'{
@@ -119,7 +130,8 @@ export function attemptTwo(g:Game,attackId:string,defendId:string,assignmentModi
 export function completeConversion(g:Game):Game{
   if(g.conversion?.stage!=='result')throw new Error('Conversion result is not final')
   const receiver=other(g.conversion.team),finished=g.quarter===4&&g.seconds<=0
-  return {...g,conversion:undefined,phase:finished?'final':'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'d43Cover3',ballStart:25,ballEnd:25,log:addLog(g,finished?'Final whistle.':`${team(receiver).short} receives the kickoff at its 25.`)}
+  const next:Game={...g,conversion:undefined,phase:finished?'final':'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,finished?'Final whistle.':g.pendingPeriod===3?'Conversion complete. Halftime.':`${team(receiver).short} receives the kickoff at its 25.`)}
+  return g.pendingPeriod?startNextPeriod(g.pendingPeriod===3?{...next,drive:g.drive}:next,g.pendingPeriod):next
 }
 export function opponentSpecial(g:Game):'punt'|'fieldGoal'|null {
   if(g.possession!=='away'||g.down!==4) return null
@@ -149,5 +161,6 @@ export function special(g:Game,kind:'punt'|'fieldGoal',defenseCall?:string):Game
   const receivingCall=({puntReturn:'Punt Return',puntBlock:'Punt Block',puntSafe:'Punt Safe',fieldGoalBlock:'Field Goal Block',fieldGoalSafe:'Field Goal Safe'} as Record<string,string>)[defenseCall??'']??(kind==='punt'?'Punt Return':'Field Goal Block')
   const record={snap:g.snap+1,mine:p==='home'?kickingCall:receivingCall,theirs:p==='home'?receivingCall:kickingCall,outcome:line}
   const why=kind==='punt'?'The punt traded possession for field position. The return or block call influenced the outcome.':'The kick attempted three points from the current distance. The defensive response added pressure without determining the result.'
-  return {...g,seed,quarter:time.quarter,seconds:time.seconds,phase:time.finished?'final':'select',score:good?{...g.score,[p]:g.score[p]+3}:g.score,possession:opp,yard:target,down:1,toGo:Math.min(10,100-target),drive:g.drive+1,snap:g.snap+1,recent:[],last:{yards:kind==='punt'?puntYards:0,text:line,offense:kind,defense:defenseCall??(kind==='punt'?'puntReturn':'fieldGoalSafe'),turnover:false,touchdown:false,safety:false,firstDown:false,clock:8,matchup:'Neutral',why,punt},history:[record,...g.history],log:addLog(g,line)}
+  const next:Game={...g,seed,quarter:time.quarter,seconds:time.seconds,phase:time.finished?'final':'select',score:good?{...g.score,[p]:g.score[p]+3}:g.score,possession:opp,yard:target,down:1,toGo:Math.min(10,100-target),drive:g.drive+1,snap:g.snap+1,recent:[],last:{yards:kind==='punt'?puntYards:0,text:line,offense:kind,defense:defenseCall??(kind==='punt'?'puntReturn':'fieldGoalSafe'),turnover:false,touchdown:false,safety:false,firstDown:false,clock:8,matchup:'Neutral',why,punt},history:[record,...g.history],log:addLog(g,line)}
+  return time.nextQuarter?startNextPeriod(next,time.nextQuarter):next
 }

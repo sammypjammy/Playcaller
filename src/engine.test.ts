@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, completeConversion, finish, fresh, opponentSpecial, resolve, selectAI, special } from './engine'
+import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, completeConversion, finish, fresh, openingKickoff, opponentSpecial, resolve, selectAI, special } from './engine'
 
 test('a touchdown scores six and holds possession for the conversion',()=>{
   const g={...fresh(1),yard:96,toGo:4}
@@ -27,6 +27,37 @@ test('punt and field goal advance possession',()=>{
   assert.equal(punt.possession,'away');assert.equal(punt.down,1)
   const kick=special({...fresh(1),yard:90,down:4},'fieldGoal')
   assert.equal(kick.possession,'away');assert.equal(kick.score.home,3)
+})
+test('opening choice determines the first and second half receivers',()=>{
+  const home=openingKickoff(fresh(3),'home')
+  const away=openingKickoff(fresh(3),'away')
+  assert.equal(home.possession,'home')
+  assert.equal(away.possession,'away')
+  assert.equal(away.selected,'cover3')
+  const result={yards:3,text:'3-yard run.',offense:'sbInside',defense:'cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29}
+  const homeHalf=finish({...home,quarter:2,seconds:1,down:2,yard:47},result,4)
+  assert.equal(homeHalf.quarter,3);assert.equal(homeHalf.seconds,180)
+  assert.equal(homeHalf.possession,'away');assert.equal(homeHalf.yard,25);assert.equal(homeHalf.down,1)
+  assert.match(homeHalf.log[0],/Halftime kickoff/)
+  const awayHalf=special({...away,quarter:2,seconds:1,down:2,yard:70},'punt','puntReturn')
+  assert.equal(awayHalf.quarter,3);assert.equal(awayHalf.seconds,180)
+  assert.equal(awayHalf.possession,'home');assert.equal(awayHalf.yard,25);assert.equal(awayHalf.down,1)
+})
+test('a touchdown at halftime completes its conversion before the second half kickoff',()=>{
+  const opening=openingKickoff(fresh(4),'home')
+  const touchdown=finish({...opening,quarter:2,seconds:1,yard:99,toGo:1},{yards:1,text:'Touchdown!',offense:'sbInside',defense:'cover3',turnover:false,touchdown:true,safety:false,firstDown:false,clock:29},5)
+  assert.equal(touchdown.quarter,2);assert.equal(touchdown.seconds,0)
+  assert.equal(touchdown.conversion?.stage,'choice')
+  const next=completeConversion(attemptPAT(chooseConversion(touchdown,'pat')))
+  assert.equal(next.score.home,7)
+  assert.equal(next.quarter,3);assert.equal(next.seconds,180)
+  assert.equal(next.possession,'away');assert.equal(next.yard,25)
+  assert.equal(next.conversion,undefined)
+  assert.equal(next.history.length,2)
+})
+test('special teams kicks work on first down',()=>{
+  assert.equal(special({...fresh(6),down:1},'punt').possession,'away')
+  assert.equal(special({...fresh(6),down:1,yard:80},'fieldGoal').possession,'away')
 })
   test('punt return has a catch, a runback, and matching possession spot',()=>{
     const returned=special({...fresh(7),yard:30,down:4},'punt','puntReturn')

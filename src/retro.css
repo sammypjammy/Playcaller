@@ -291,3 +291,12 @@ main{padding:12px 22px 32px}
 .defenseModes button:nth-child(3){grid-column:1/-1}
 .coach .folder .callList{align-content:start;grid-auto-rows:min-content}
 @media (max-width:699px){.defenseModes button{font-size:11px}}
+.coinTossPanel{height:100%;padding:24px 20px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:12px;text-align:center;background:repeating-linear-gradient(135deg,#e4d4aa 0,#e4d4aa 12px,#eadbb6 12px,#eadbb6 24px)}
+.coinTossPanel .eyebrow{font:900 14px 'Barlow Condensed';letter-spacing:2px}
+.coinFace{align-self:center;display:grid;place-items:center;width:90px;height:90px;border-radius:50%;border:7px double #9b593f;background:#f2d384;color:#783e31;box-shadow:5px 5px 0 #8f9079;font:900 64px 'Barlow Condensed';animation:coinHover 2.5s ease-in-out infinite}
+.coinTossPanel h1{margin:0;font:900 38px 'Barlow Condensed';text-transform:uppercase;color:#243d37}
+.coinTossPanel p{font-size:13px;line-height:1.45;margin:0;color:#40574d}
+.coinTossPanel .primary{width:100%;min-height:44px}
+.coinTossPanel small{font:800 10px monospace;color:#53695e}
+@keyframes coinHover{50%{transform:translateY(-5px) rotateY(18deg)}}
+@media(max-width:699px){.coinTossPanel{padding:9px;gap:5px}.coinFace{width:48px;height:48px;font-size:32px;border-width:4px}.coinTossPanel h1{font-size:22px}.coinTossPanel p{font-size:10px}.coinTossPanel .primary{min-height:28px;padding:3px;font-size:15px}.coinTossPanel small{font-size:8px}}
