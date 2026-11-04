@@ -252,6 +252,22 @@ main{padding:12px 22px 32px}
 .playArtNotes p{background:#e5d8b5;padding:9px;margin:0;font-size:12px;line-height:1.4}
 .playArtNotes b{color:#914c35}
 @media(max-width:640px){.playArtModal{padding:10px}.playArtHeading h2{font-size:25px}.playArtNotes{grid-template-columns:1fr}.playArtNotes p{padding:5px;font-size:11px}}
+.playArtModal{width:min(1080px,96vw);background:#e6d6ac;border:5px solid #9b593f;box-shadow:8px 8px 0 #05140e;padding:14px}
+.playArtHeading{border-bottom:3px solid #9b593f;margin-bottom:10px}
+.playArtHeading h2{letter-spacing:1px}
+.retroArt{border:4px solid #243d37;background:#203c32;color:#f4e4b4;box-shadow:inset 0 0 0 3px #b98a5c}
+.retroArtTop{display:flex;justify-content:space-between;gap:12px;padding:7px 11px;background:#172e2b;border-bottom:3px solid #c69c64;font:900 12px 'Barlow Condensed';letter-spacing:2px}
+.retroArt svg{display:block;width:100%;height:auto;image-rendering:pixelated}
+.retroArtYard{fill:#d5e1c6;opacity:.65;font:900 20px monospace}
+.retroArtLos,.retroArtKick,.retroArtFooter{fill:#f6e9bc;font:900 13px monospace;letter-spacing:1px}
+.retroArtKick{fill:#ffdb78}
+.retroArtPlayerText{fill:#fff4d2;font:900 10px monospace}
+.retroArtAssignments{border-top:3px solid #c69c64;padding:9px 12px 12px;background:#173b35}
+.retroArtAssignments>b{font:900 16px 'Barlow Condensed';letter-spacing:1.5px;color:#ffdb78}
+.retroArtAssignments>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px;margin-top:5px}
+.retroArtAssignments span{font:800 12px/1.35 monospace;color:#eff0d0;border-bottom:1px dashed #63816d;padding:4px 0}
+.retroArtAssignments em{font-style:normal;color:#ffdb78;margin-right:9px}
+@media(max-width:640px){.playArtModal{padding:7px}.retroArtTop{font-size:9px;letter-spacing:1px}.retroArtAssignments>div{grid-template-columns:1fr}.retroArtAssignments span{font-size:10px}}
 .defenseModes button{min-width:0;font-size:13px;white-space:nowrap}
 .defenseModes button:nth-child(3){grid-column:1/-1}
 .coach .folder .callList{align-content:start;grid-auto-rows:min-content}
