@@ -89,7 +89,7 @@ export function finish(g:Game,result:Result,seed:number):Game {
   if(result.touchdown){base.score={...g.score,[p]:g.score[p]+6};base.log=addLog({...g,log:base.log},`${team(p).short} touchdown! (+6) Choose an extra-point attempt.`);base.conversion={team:p,stage:'choice'};base.pendingPeriod=time.nextQuarter;base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
   else if(result.safety){base.score={...g.score,[opp]:g.score[opp]+2};base.possession=opp;base.yard=25;base.down=1;base.toGo=10;base.drive++;base.recent=[]}
   else if(result.turnover){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[]}
-  else if(g.down===4&&!result.firstDown){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[];base.log=addLog({...g,log:base.log},'Turnover on downs.')}
+  else if(g.down===4&&!result.firstDown){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[];base.last={...result,text:`${result.text} Turnover on downs.`};base.history[0].outcome=base.last.text;base.log=addLog({...g,log:base.log},`Turnover on downs — ${team(opp).short} takes over at its ${base.yard}.`)}
   else {base.yard=Math.max(1,Math.min(99,g.yard+result.yards));base.down=result.firstDown?1:g.down+1;base.toGo=result.firstDown?Math.min(10,100-base.yard):Math.max(1,g.toGo-result.yards)}
   if(time.finished&&!base.conversion){base.phase='final';base.log=addLog({...g,log:base.log},'Final whistle.')} 
   return time.nextQuarter&&!base.conversion?startNextPeriod(base,time.nextQuarter):base

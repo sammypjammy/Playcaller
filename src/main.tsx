@@ -29,6 +29,7 @@ function resultLabel(pending:PendingPlay|null){
   if(r.touchdown)return 'TOUCHDOWN!'
   if(r.safety)return 'SAFETY!'
   if(r.turnover)return r.text.includes('Intercepted')?'INTERCEPTION!':'FUMBLE — DEFENSE RECOVERS'
+  if(pending.before.down===4&&!r.firstDown)return 'TURNOVER ON DOWNS'
   if(r.text==='Incomplete pass.')return 'INCOMPLETE PASS'
   if(r.yards<0)return `${name} — LOSS OF ${Math.abs(r.yards)}`
   return `${name} — ${r.yards} YARD ${r.offense.startsWith('fake')||offenseById(r.offense)?.kind==='pass'?'COMPLETION':'GAIN'}`

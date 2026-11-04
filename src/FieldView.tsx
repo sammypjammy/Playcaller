@@ -135,7 +135,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const ballLateral=playing&&punt?runProgress<.66?0:puntReturner?.field.lateral??0:playing&&game.last?.conversionReturn?returner?.field.lateral??0:playing&&kick?(game.last?.text.toUpperCase().includes('MISS')?13*kickFlight:0):normalBall?.lateral??0
   const ballX=world(ballYard)
   const arc=normalBall?.flight??(punt?runProgress<.66?puntFlight:0:kickFlight)
-  const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*arc):0)+(incomplete&&ending?12*progress:0)
+  const ballY=incomplete&&(ending||playing&&runProgress>=.65)?fieldY(ballLateral)+9:fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*arc):0)
   const focus=playing?ballX:world(game.yard)
   const targetCamera=Math.max(0,Math.min(1000-viewWidth,focus-viewWidth/2))
   const [camera,setCamera]=useState(targetCamera)

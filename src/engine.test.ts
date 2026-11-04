@@ -74,6 +74,8 @@ test('special teams kicks work on first down',()=>{
 test('a failed fourth down changes possession',()=>{
   const g={...fresh(1),down:4,toGo:8,yard:40}
   const next=finish(g,{yards:2,text:'gain',offense:'sbInside',defense:'d43Cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29},2)
+  assert.match(next.last?.text??'',/Turnover on downs/)
+  assert.match(next.log[0],/takes over/)
   assert.equal(next.possession,'away');assert.equal(next.yard,58);assert.equal(next.down,1)
 })
 test('an exhibition reaches a final whistle with valid state',()=>{
