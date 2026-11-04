@@ -38,7 +38,7 @@ test('longer gains get more replay time and interceptions have an on-field defen
   assert.ok(durationFor('PLAY_RUNNING',false,result(25,'completion'))>durationFor('PLAY_RUNNING',false,result(2,'run')))
   const pick=buildReplay(result(0,'interception'),matchup,25)
   assert.ok(matchup.defense.some(p=>p.id===pick.interceptorId))
-  assert.equal(pick.targetYard,pick.endYard)
+  assert.ok(pick.targetYard>pick.startYard)
 })
 test('resolved runs and passes supply replay endpoints without changing simulation yardage',()=>{
   for(const attack of ['sbInside','sbSlants'])for(let seed=1;seed<=60;seed++){

@@ -9,7 +9,11 @@ export function assignmentPath(player: ActivePlayer): PathPoint[] {
   const side = Math.sign(player.preSnap.lateral) || 1
   const gapSide = gap?.endsWith('left') ? -1 : 1
   const gapWidth = gap?.startsWith('D') ? 7 : gap?.startsWith('C') ? 4 : gap?.startsWith('B') ? 2.5 : .7
-  if (kind === 'ballCarry' || kind === 'leadBlock') return [{forward:0,lateral:0},{forward:2,lateral:gapSide*gapWidth*.5},{forward:kind==='leadBlock'?5:9,lateral:gapSide*gapWidth}]
+  if (kind === 'ballCarry' || kind === 'leadBlock') {
+    if(target==='outside-zone'||target==='toss')return [{forward:0,lateral:0},{forward:2,lateral:gapSide*5},{forward:5,lateral:gapSide*9},{forward:kind==='leadBlock'?8:12,lateral:gapSide*9}]
+    if(target==='counter')return [{forward:0,lateral:0},{forward:1,lateral:-gapSide*2},{forward:4,lateral:gapSide*gapWidth},{forward:kind==='leadBlock'?7:11,lateral:gapSide*gapWidth}]
+    return [{forward:0,lateral:0},{forward:2,lateral:gapSide*gapWidth*.5},{forward:kind==='leadBlock'?5:9,lateral:gapSide*gapWidth}]
+  }
   if (kind === 'pullBlock') return [{forward:0,lateral:0},{forward:0,lateral:gapSide*3},{forward:3,lateral:gapSide*4}]
   if (kind === 'runBlock') return [{forward:0,lateral:0},{forward:1,lateral:target==='outside-zone'||target==='toss'?gapSide*1.5:0},{forward:3,lateral:target==='outside-zone'||target==='toss'?gapSide*2:0}]
   if (kind === 'passBlock' || kind === 'protection') return [{forward:0,lateral:0},{forward:.8,lateral:0},{forward:1.2,lateral:0}]

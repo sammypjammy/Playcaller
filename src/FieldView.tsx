@@ -6,31 +6,30 @@ import { teamVisuals, type SpritePose } from './visuals'
 import { blendPoint, huddlePositions, tackleAngle } from './fieldPresentation'
 import type { FlowPhase } from './flow'
 import { lateralY, turfBands, yardLines, yardX } from './fieldGeometry'
-import { conversionReturnYard, replayCarrierYard, replayTacklerPosition } from './replay'
+import { conversionReturnYard, replayTacklerPosition } from './replay'
 import { assignmentPath, pointOnPath } from './assignmentPath'
+import { normalBallPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
 
 type Props={game:Game;matchup:Matchup;progress:number;debug:boolean;flow:FlowPhase;fromMatchup:Matchup|null;previousMatchup:Matchup|null;resultText:string}
-function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string):ActivePlayer {
+function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string,qbStart:ActivePlayer['preSnap']):ActivePlayer {
   if(progress<=0)return player
   const assignment=player.assignment,kind=assignment.kind
   let forward=0,lateral=0
   const replay=result?.replay
-  if(replay&&player.id===replay.carrierId&&replay.event==='sack'){
-    forward=replayCarrierYard(replay,progress)-player.preSnap.yard
-    lateral=(replay.targetLateral-player.preSnap.lateral)*Math.min(1,progress/.9)
+  if(player.position==='QB'&&replay){
+    const at=quarterbackPosition(player,replay,playId,progress)
+    forward=at.yard-player.preSnap.yard;lateral=at.lateral-player.preSnap.lateral
   }
-  else if(replay&&player.id===replay.receiverId&&replay.event==='completion'){
-    forward=replayCarrierYard(replay,progress)-player.preSnap.yard
-    lateral=(replay.targetLateral-player.preSnap.lateral)*Math.min(1,progress/.9)
+  else if(kind==='ballCarry'&&replay&&(replay.event==='run'||replay.event==='fumble')){
+    const at=runnerPosition(player,qbStart,replay,playId,playId==='sgDraw'?Math.max(0,(progress-.13)/.87):progress)
+    forward=at.yard-player.preSnap.yard;lateral=at.lateral-player.preSnap.lateral
   }
-  else if(kind==='ballCarry'){
-    const carryProgress=playId==='sgDraw'?Math.max(0,(progress-.2)/.8):progress
-    forward=replay&&(replay.event==='run'||replay.event==='fumble')?replayCarrierYard(replay,carryProgress)-player.preSnap.yard:(result?.yards??0)*carryProgress
-    const gap=assignment.gap??'A-right',sign=gap.endsWith('left')?-1:1
-    lateral=replay&&(replay.event==='run'||replay.event==='fumble')?(replay.targetLateral-player.preSnap.lateral)*Math.min(1,carryProgress/.9):sign*(gap.startsWith('D')?7:gap.startsWith('C')?4:gap.startsWith('B')?2.5:.7)*carryProgress
+  else if(kind==='route'){
+    const at=routePosition(player,replay,progress)
+    forward=at.yard-player.preSnap.yard;lateral=at.lateral-player.preSnap.lateral
   }
   else if(kind==='handoff'||kind==='playAction')forward=1.2*progress
-  else if(['route','pullBlock','leadBlock','runBlock','passBlock','protection'].includes(kind)){
+  else if(['pullBlock','leadBlock','runBlock','passBlock','protection'].includes(kind)){
     const point=pointOnPath(assignmentPath(player),progress)
     forward=point.forward;lateral=point.lateral
   }
@@ -38,7 +37,7 @@ function motion(player:ActivePlayer,result:Result|undefined,progress:number,play
   else if(kind==='runGap'||kind==='edgeContain')forward=-1.8*progress
   else if(kind==='man'||kind==='zone'||kind==='deepSafety'||kind==='runSupport')forward=2*progress
   const state:ActivePlayer['state']=kind==='ballCarry'?'carrying':kind==='passBlock'||kind==='runBlock'||kind==='leadBlock'||kind==='pullBlock'||kind==='protection'?'blocking':kind==='man'||kind==='zone'||kind==='deepSafety'?'covering':kind==='passRush'||kind==='blitz'?'rushing':'moving'
-  return {...player,state,field:{yard:player.field.yard+forward,lateral:player.field.lateral+lateral}}
+  return {...player,state,field:{yard:player.preSnap.yard+forward,lateral:player.preSnap.lateral+lateral}}
 }
 function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefined,targetId:string|undefined,tacklerId:string|undefined,incomplete:boolean,returnerId?:string):SpritePose {
   if(flow==='HUDDLE'||flow==='PLAY_SELECTED'||flow==='READY_FOR_SNAP')return ['OL','DL'].includes(p.position)&&flow==='READY_FOR_SNAP'?'set':'idle'
@@ -54,7 +53,7 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   const kind=p.assignment.kind
   if(kind==='ballCarry')return progress>.45?'sprint':'run'
   if(kind==='handoff'||kind==='playAction'||kind==='passing')return 'pass'
-  if(kind==='route')return p.id===targetId&&progress>.78?'catch':progress>.55?'sprint':'run'
+  if(kind==='route')return p.id===targetId&&result?.event==='completion'?progress>=.57&&progress<.72?'catch':progress>=.72?'sprint':'run':progress>.55?'sprint':'run'
   if(['runBlock','passBlock','pullBlock','leadBlock','protection'].includes(kind))return 'block'
   if(['passRush','blitz','runGap','edgeContain','runSupport'].includes(kind))return 'sprint'
   return 'run'
@@ -82,9 +81,10 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const runProgress=flow==='PLAY_RUNNING'?progress:playing?1:0
   const huddles=huddlePositions(matchup,game.yard)
   const oldPositions=fromMatchup?new Map([...fromMatchup.offense,...fromMatchup.defense].map(p=>[p.id,p.field])):huddles
-  const returningPositions=previousMatchup?new Map([...previousMatchup.offense,...previousMatchup.defense].map(p=>{const moving=motion(p,game.last,1,previousMatchup.playId);return [p.id,moving.field]})):new Map<string,ActivePlayer['field']>()
+  const returningPositions=previousMatchup?new Map([...previousMatchup.offense,...previousMatchup.defense].map(p=>{const moving=motion(p,game.last,1,previousMatchup.playId,previousMatchup.offense.find(q=>q.position==='QB')?.preSnap??{yard:game.yard-2,lateral:0});return [p.id,moving.field]})):new Map<string,ActivePlayer['field']>()
   const lineupProgress=flow==='BREAKING_HUDDLE' ? progress*.45 : flow==='LINING_UP' ? .45+progress*.55 : 1
-  const played=[...matchup.offense,...matchup.defense].map(p=>motion(p,game.last,runProgress,matchup.playId))
+  const qbStart=matchup.offense.find(p=>p.position==='QB')?.preSnap??{yard:game.yard-2,lateral:0}
+  const played=[...matchup.offense,...matchup.defense].map(p=>motion(p,game.last,runProgress,matchup.playId,qbStart))
   const replay=game.last?.replay
   const runner=played.find(p=>p.id===replay?.carrierId)
   for(const p of played.filter(p=>p.team!==matchup.offense[0].team)){
@@ -92,6 +92,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
     if(p.assignment.kind==='man'&&p.assignment.target){const receiver=played.find(x=>x.id===p.assignment.target);if(receiver)p.field=blendPoint(p.field,{yard:receiver.field.yard+1.5,lateral:receiver.field.lateral},runProgress*.72)}
     else if(['zone','deepSafety'].includes(p.assignment.kind))p.field={yard:p.preSnap.yard+(p.assignment.kind==='deepSafety'?2:3)*runProgress,lateral:p.preSnap.lateral+(p.assignment.zone?.includes('left')?-2:2)*runProgress}
     else if(runner&&['runGap','runSupport','edgeContain','qbSpy','passRush','blitz'].includes(p.assignment.kind))p.field=blendPoint(p.field,{yard:runner.field.yard+1,lateral:runner.field.lateral},runProgress*.5)
+    if(replay?.event==='completion'&&runner&&runProgress>.65&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:runner.field.yard-1,lateral:runner.field.lateral},Math.min(.55,(runProgress-.65)*1.8))
     if(replay?.contact&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
   }
   const returnerId=game.last?.returnerId
@@ -125,13 +126,16 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const thrower=players.find(p=>['QB','P','H'].includes(p.position)&&p.team===matchup.offense[0].team)
   const kick=game.last?.offense==='punt'||game.last?.offense==='fieldGoal'
   const passing=replay&&['completion','incomplete','interception'].includes(replay.event)
-  const flight=Math.max(0,Math.min(1,(runProgress-.23)/.43))
   const kickFlight=Math.max(0,Math.min(1,(runProgress-.16)/.76))
   const punterYard=thrower?.preSnap.yard??game.ballStart-12
-  const ballYard=playing&&punt?runProgress<.18?game.ballStart+(punterYard-game.ballStart)*runProgress/.18:runProgress<.66?punterYard+(punt.catchYard-punterYard)*puntFlight:punt.catchYard-punt.returnYards*puntRun:playing&&game.last?.conversionReturn?conversionReturnYard(game.ballStart,returnSpot,runProgress):playing&&kick?game.ballStart+(game.ballEnd-game.ballStart)*kickFlight:playing&&passing?runProgress<.65?replay.startYard+(replay.targetYard-replay.startYard)*flight:replay.event==='completion'?replayCarrierYard(replay,runProgress):replay.targetYard:playing&&target?target.field.yard:game.yard
-  const ballLateral=playing&&punt?runProgress<.66?0:puntReturner?.field.lateral??0:playing&&game.last?.conversionReturn?returner?.field.lateral??0:playing&&kick?(game.last?.text.toUpperCase().includes('MISS')?13*kickFlight:0):playing&&passing?(thrower?.field.lateral??0)+((replay.targetLateral-(thrower?.field.lateral??0))*flight):playing&&target?target.field.lateral:0
+  const center=players.find(p=>p.position==='C'&&p.team===matchup.offense[0].team)
+  const interceptor=players.find(p=>p.id===replay?.interceptorId)
+  const normalBall=playing&&replay&&!kick&&!game.last?.conversionReturn?normalBallPosition(replay,center?.preSnap??{yard:game.ballStart,lateral:0},thrower?.field??{yard:game.ballStart-2,lateral:0},target?.field??{yard:game.ballStart,lateral:0},interceptor?.field,runProgress):null
+  const ballYard=playing&&punt?runProgress<.18?game.ballStart+(punterYard-game.ballStart)*runProgress/.18:runProgress<.66?punterYard+(punt.catchYard-punterYard)*puntFlight:punt.catchYard-punt.returnYards*puntRun:playing&&game.last?.conversionReturn?conversionReturnYard(game.ballStart,returnSpot,runProgress):playing&&kick?game.ballStart+(game.ballEnd-game.ballStart)*kickFlight:normalBall?.yard??game.yard
+  const ballLateral=playing&&punt?runProgress<.66?0:puntReturner?.field.lateral??0:playing&&game.last?.conversionReturn?returner?.field.lateral??0:playing&&kick?(game.last?.text.toUpperCase().includes('MISS')?13*kickFlight:0):normalBall?.lateral??0
   const ballX=world(ballYard)
-  const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*(passing?flight:punt?runProgress<.66?puntFlight:0:kickFlight)):0)+(incomplete&&ending?12*progress:0)
+  const arc=normalBall?.flight??(punt?runProgress<.66?puntFlight:0:kickFlight)
+  const ballY=fieldY(ballLateral)-3-(playing&&(passing||kick)&&(!game.last?.conversionReturn||runProgress<.35)?22*Math.sin(Math.PI*arc):0)+(incomplete&&ending?12*progress:0)
   const focus=playing?ballX:world(game.yard)
   const targetCamera=Math.max(0,Math.min(1000-viewWidth,focus-viewWidth/2))
   const [camera,setCamera]=useState(targetCamera)

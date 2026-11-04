@@ -216,10 +216,10 @@ function assignOffense(players:ActivePlayer[],playId:string){
       const pull=['toss','lead','power','counter'].includes(concept)&&p.position===(concept==='toss'||concept==='power'?'RG':'LG')
       p.assignment={kind:pass?'passBlock':pull?'pullBlock':'runBlock',gap:spec?.target as Gap??(side==='left'?'B-left':'B-right'),target:concept};continue
     }
-    if(p.position==='HB'){p.assignment=pass?(concept==='pa-cross'||concept==='bootleg'?{kind:'playAction',target:'fake handoff'}:concept==='bubble'||concept==='verticals'?{kind:'protection',target:'edge rusher'}:{kind:'route',route:concept==='mesh'?'wheel':'checkdown'}):{kind:'ballCarry',gap:spec?.target as Gap??'A-right'};continue}
+    if(p.position==='HB'){p.assignment=pass?(concept==='pa-cross'||concept==='bootleg'?{kind:'playAction',target:'fake handoff'}:concept==='bubble'||concept==='verticals'?{kind:'protection',target:'edge rusher'}:{kind:'route',route:concept==='mesh'?'wheel':'checkdown'}):{kind:'ballCarry',gap:spec?.target as Gap??'A-right',target:concept};continue}
     if(p.position==='FB'){p.assignment=pass?{kind:'protection',target:'inside rush'}:{kind:'leadBlock',gap:spec?.target as Gap??'A-right'};continue}
     const index=eligible.indexOf(p)
-    p.assignment=pass?{kind:routeList[index]==='block bubble'?'passBlock':'route',route:routeList[index],target:concept}:{kind:'runBlock',target:concept==='outside-zone'||concept==='toss'?'edge defender':'second level',gap:spec?.target as Gap}
+    p.assignment=pass?{kind:routeList[index]==='block bubble'?'passBlock':'route',route:routeList[index],target:concept}:{kind:'runBlock',target:concept,gap:spec?.target as Gap}
   }
 }
 function assignDefense(players:ActivePlayer[],offense:ActivePlayer[],coverageId:string,callId:string){

@@ -7,7 +7,7 @@ const label=(p:ActivePlayer)=>{
   if(a.kind==='route')return `Run ${a.route??'route'}`
   if(a.kind==='ballCarry')return `Carry through ${a.gap??'called gap'}`
   if(a.kind==='leadBlock'||a.kind==='pullBlock')return `${a.kind==='leadBlock'?'Lead':'Pull'} through ${a.gap??'the lane'}`
-  if(a.kind==='runBlock')return a.target==='edge defender'?'Seal the edge defender':a.target==='second level'?'Block downfield':`Block toward ${a.gap??'the run lane'}`
+  if(a.kind==='runBlock')return a.target==='outside-zone'||a.target==='toss'?'Seal the outside edge':p.position==='WR'||p.position==='TE'?'Block downfield':`Block toward ${a.gap??'the run lane'}`
   if(a.kind==='passBlock')return a.target==='protect kick lane'?'Protect kick lane':'Protect the passer'
   if(a.kind==='protection')return `Pick up ${a.target??'a rusher'}`
   if(a.kind==='man')return 'Cover assigned receiver'
@@ -67,7 +67,8 @@ export default function RetroPlayArt({matchup,side}:{matchup:Matchup;side:'offen
           const color=k==='route'?ink[i%ink.length]:k==='ballCarry'?'#ffdb78':'#d7e4cb'
           const path=assignmentPath(p)
           const lane=path[path.length-1].lateral+p.preSnap.lateral
-          const points=k==='ballCarry'||k==='leadBlock'?`${x(p.preSnap.yard)},${y(p.preSnap.lateral)} ${x(los-2)},${y((p.preSnap.lateral+lane)/2)} ${x(los+(k==='ballCarry'?8:5))},${y(lane)}`:path.map(d=>`${x(p.preSnap.yard+d.forward)},${y(p.preSnap.lateral+d.lateral)}`).join(' ')
+          const designedRun=k==='ballCarry'&&['outside-zone','toss','counter'].includes(a.target??'')
+          const points=(k==='ballCarry'||k==='leadBlock')&&!designedRun?`${x(p.preSnap.yard)},${y(p.preSnap.lateral)} ${x(los-2)},${y((p.preSnap.lateral+lane)/2)} ${x(los+(k==='ballCarry'?8:5))},${y(lane)}`:path.map(d=>`${x(p.preSnap.yard+d.forward)},${y(p.preSnap.lateral+d.lateral)}`).join(' ')
           return <polyline key={p.id} points={points} fill="none" stroke={color} strokeWidth={k==='route'||k==='ballCarry'?4:3} strokeDasharray={k==='leadBlock'||k==='pullBlock'?'7 5':undefined} strokeLinejoin="bevel" markerEnd="url(#chalkArrow)"/>
         }
         if(k==='passBlock'||k==='runBlock'||k==='protection')return <path key={p.id} d={`M${px+13} ${py-10}v20`} stroke="#d7e4cb" strokeWidth="4"/>
