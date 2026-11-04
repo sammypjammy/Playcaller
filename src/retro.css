@@ -268,6 +268,25 @@ main{padding:12px 22px 32px}
 .retroArtAssignments span{font:800 12px/1.35 monospace;color:#eff0d0;border-bottom:1px dashed #63816d;padding:4px 0}
 .retroArtAssignments em{font-style:normal;color:#ffdb78;margin-right:9px}
 @media(max-width:640px){.playArtModal{padding:7px}.retroArtTop{font-size:9px;letter-spacing:1px}.retroArtAssignments>div{grid-template-columns:1fr}.retroArtAssignments span{font-size:10px}}
+.playArtModal{height:min(650px,94dvh);display:flex;flex-direction:column;overflow:hidden}
+.playArtHeading{flex:none;margin-bottom:6px}
+.playArtHeading h2{font-size:28px;margin:0 0 5px}
+.retroArt{flex:1;min-height:0;display:flex;flex-direction:column}
+.retroArtTop{flex:none;padding:4px 9px}
+.retroArtLegend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:4px 9px;background:#e8d8ac;color:#23473e;border-bottom:3px solid #c69c64;font:900 10px monospace;text-transform:uppercase}
+.retroArtLegend span{display:flex;align-items:center;gap:5px}.retroArtLegend i{display:inline-block;width:22px;border-top:3px solid #a35b3b}.retroArtLegend .artDashed{border-top-style:dashed}.retroArtLegend .artBlue{border-color:#388e9a}
+.retroArtBody{display:grid;grid-template-columns:minmax(0,1fr) 295px;flex:1;min-height:0}
+.retroArtBody svg{width:100%;height:100%;min-height:0;object-fit:contain;background:#2d6d49}
+.retroArtAssignments{min-height:0;overflow:auto;border-top:0;border-left:3px solid #c69c64;padding:7px;background:#173b35}
+.retroArtAssignments>div{display:grid;grid-template-columns:1fr;gap:0;margin-top:3px}
+.retroArtAssignments span{display:grid;grid-template-columns:20px 30px minmax(0,1fr);align-items:center;gap:4px;min-height:31px;padding:2px 0;font:800 11px/1.2 monospace}
+.retroArtAssignments em{display:grid;place-items:center;width:18px;height:18px;margin:0;background:#f6d788;color:#243d37;font-size:10px}
+.retroArtAssignments strong{color:#ffdb78;font-size:11px}.retroArtAssignments small{font:800 10px/1.2 monospace;color:#eff0d0}
+.retroArtPlayerText{font-size:14px}.retroArtNumber{fill:#213b35;font:900 11px monospace}
+.retroArtNumber{fill:#fff0bd;font:900 9px monospace}
+.playArtExtra{flex:none;background:#e8d8ac;color:#243d37;font:800 11px monospace;max-height:22dvh;overflow:auto}
+.playArtExtra summary{cursor:pointer;padding:6px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playArtExtra .playArtNotes{padding:2px 4px 7px}
+@media(max-width:700px){.playArtModal{width:98vw;padding:5px}.retroArtBody{grid-template-columns:minmax(0,1fr) 38%}.retroArtAssignments{padding:3px}.retroArtAssignments span{grid-template-columns:16px 25px minmax(0,1fr);gap:2px;font-size:9px}.retroArtAssignments strong,.retroArtAssignments small{font-size:8px}.retroArtAssignments em{width:15px;height:15px;font-size:8px}.retroArtLegend{gap:5px;font-size:8px}}
 .defenseModes button{min-width:0;font-size:13px;white-space:nowrap}
 .defenseModes button:nth-child(3){grid-column:1/-1}
 .coach .folder .callList{align-content:start;grid-auto-rows:min-content}
