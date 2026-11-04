@@ -239,6 +239,19 @@ main{padding:12px 22px 32px}
   .scoreboard{min-height:58px;max-height:58px}
 }
 .defenseModes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.callAvailability{padding:12px;color:#3a5350;font-size:12px;line-height:1.4}
+.playArtBackdrop{z-index:20}
+.playArtModal{width:min(880px,96vw);max-height:94dvh;overflow:auto;background:#f3e8c6;color:#243c3e;border:3px solid #d8b77b;box-shadow:8px 8px 0 #05140e;padding:18px}
+.playArtHeading{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.playArtHeading small{font:800 11px monospace;letter-spacing:1px;color:#a0523d}
+.playArtHeading h2{font:900 36px 'Barlow Condensed';margin:2px 0 10px;text-transform:uppercase}
+.playArtHeading button{border:0;background:none;color:#943f31;font-size:34px;line-height:1}
+.detailedPlayDiagram svg{display:block;width:100%;height:auto;border:4px solid #567666}
+.playArtModal>p{font-size:14px;line-height:1.4;margin:12px 0 6px}
+.playArtNotes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.playArtNotes p{background:#e5d8b5;padding:9px;margin:0;font-size:12px;line-height:1.4}
+.playArtNotes b{color:#914c35}
+@media(max-width:640px){.playArtModal{padding:10px}.playArtHeading h2{font-size:25px}.playArtNotes{grid-template-columns:1fr}.playArtNotes p{padding:5px;font-size:11px}}
 .defenseModes button{min-width:0;font-size:13px;white-space:nowrap}
 .defenseModes button:nth-child(3){grid-column:1/-1}
 .coach .folder .callList{align-content:start;grid-auto-rows:min-content}
