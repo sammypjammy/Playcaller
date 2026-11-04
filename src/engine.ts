@@ -6,28 +6,37 @@ export type Phase = 'select' | 'animating' | 'final'
 export type Kind = PlayKind
 export type Play = PlaySpec
 export type Team = { name: string; short: string; color: string; accent: string; ratings: { qb: number; rb: number; wr: number; line: number; rush: number; cover: number }; offense: string[]; defense: string[] }
+export type TeamId='red'|'blue'|'green'|'black'
 export type Result = { yards: number; text: string; offense: string; defense: string; turnover: boolean; touchdown: boolean; safety: boolean; firstDown: boolean; clock: number; event?:'run'|'completion'|'incomplete'|'sack'|'interception'|'fumble'; matchup?:MatchupRating; why?:string; replay?:ReplayPlan; conversionReturn?:boolean; returnerId?:string; punt?:{catchYard:number;endYard:number;returnYards:number;touchback:boolean} }
 export type PlayRecord = { snap: number; mine: string; theirs: string; outcome: string }
 export type Conversion = {team:Side;stage:'choice'|'pick'|'result';mode?:'pat'|'two';result?:string}
-export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; openingReceiver:Side; pendingPeriod?:2|3|4; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
+export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; openingReceiver:Side; homeTeamId:TeamId; awayTeamId:TeamId; pendingPeriod?:2|3|4; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
 
 export const offense: Play[] = offensivePlays
 export const defense: Play[] = defensivePlays
-export const home: Team = { name:'Iron City Foundry',short:'ICF',color:'#eb673e',accent:'#ffe2b0',ratings:{qb:78,rb:82,wr:76,line:80,rush:79,cover:74},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id) }
-export const away: Team = { name:'Bayport Breakers',short:'BAY',color:'#53bccc',accent:'#e9fcf8',ratings:{qb:81,rb:75,wr:82,line:76,rush:76,cover:80},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id) }
+export const teams:Record<TeamId,Team>={
+  red:{name:'Iron City Foundry',short:'ICF',color:'#c93639',accent:'#ffe4bd',ratings:{qb:78,rb:82,wr:76,line:80,rush:79,cover:74},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id)},
+  blue:{name:'Bayport Breakers',short:'BAY',color:'#2857d5',accent:'#e9efff',ratings:{qb:81,rb:75,wr:82,line:76,rush:76,cover:80},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id)},
+  green:{name:'Cedar Valley Stags',short:'CVS',color:'#25824e',accent:'#e2f5c9',ratings:{qb:76,rb:83,wr:77,line:81,rush:78,cover:77},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id)},
+  black:{name:'Northside Ravens',short:'NSR',color:'#242831',accent:'#f1d384',ratings:{qb:80,rb:76,wr:79,line:77,rush:82,cover:78},offense:offense.map(p=>p.id),defense:defense.map(p=>p.id)}
+}
+export const teamIds:TeamId[]=['red','blue','green','black']
+export const home:Team=teams.red
+export const away:Team=teams.blue
 export const other = (s: Side): Side => s === 'home' ? 'away' : 'home'
-export const team = (s: Side) => s === 'home' ? home : away
+export const team = (s: Side,g?:Game) => teams[g?(s==='home'?g.homeTeamId:g.awayTeamId):s==='home'?'red':'blue']
+export function opponentFor(selected:TeamId,draw:number):TeamId{return teamIds.filter(id=>id!==selected)[Math.min(2,Math.max(0,Math.floor(draw*3)))]}
 export const clockText = (s: number) => `${Math.floor(Math.max(0,s)/60)}:${String(Math.max(0,s)%60).padStart(2,'0')}`
 export const fieldPosition = (yard: number) => yard === 50 ? '50' : yard < 50 ? `OWN ${yard}` : `OPP ${100-yard}`
 export const nextRandom = (seed: number): [number,number] => { const n = (Math.imul(seed,1664525)+1013904223)>>>0; return [n,n/4294967296] }
-export function fresh(seed = Date.now()>>>0): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',openingReceiver:'home',yard:25,down:1,toGo:10,score:{home:0,away:0},drive:1,snap:0,selected:'sbInside',log:['Opening kickoff: Iron City starts at its 25.'],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
+export function fresh(seed = Date.now()>>>0,homeTeamId:TeamId='red',awayTeamId:TeamId='blue'): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',openingReceiver:'home',homeTeamId,awayTeamId,yard:25,down:1,toGo:10,score:{home:0,away:0},drive:1,snap:0,selected:'sbInside',log:[`Opening kickoff: ${teams[homeTeamId].short} starts at its 25.`],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
 export function openingKickoff(g:Game,receiver:Side):Game{
-  return {...g,possession:receiver,openingReceiver:receiver,yard:25,down:1,toGo:10,selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:[`Opening kickoff: ${team(receiver).short} receives at its 25.`]}
+  return {...g,possession:receiver,openingReceiver:receiver,yard:25,down:1,toGo:10,selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:[`Opening kickoff: ${team(receiver,g).short} receives at its 25.`]}
 }
 export function selectAI(g: Game): string {
   const pool = g.possession === 'home' ? defense : offense
   if(g.possession === 'away') {
-    const plays = offense.filter(p=>away.offense.includes(p.id))
+    const plays = offense.filter(p=>team('away',g).offense.includes(p.id))
     const repeated = g.recent.slice(-2)
     const candidates = plays.map(p=>({p,weight: 1 + (g.toGo > 8 && p.kind==='pass'?2:0) + (g.toGo <= 3 && p.kind==='run'?2:0) - (repeated.includes(p.id)?0.75:0)}))
     const total = candidates.reduce((n,c)=>n+c.weight,0)
@@ -45,7 +54,7 @@ export function resolve(g: Game, attackId: string, defendId: string, assignmentM
   const o = offenseById(attackId) ?? offense[0]
   const d = defenseById(defendId) ?? (o.fake?{...defense[0],id:defendId,name:defendId,kind:defendId.includes('Block')?'blitz':'contain',concept:defendId.includes('Safe')?'special-safe':'special-block',counter:[]} as Play:defense[0])
   let seed=g.seed; const draws:number[]=[];for(let i=0;i<5;i++){let r:number;[seed,r]=nextRandom(seed);draws.push(r)}
-  const a=team(g.possession).ratings, b=team(other(g.possession)).ratings
+  const a=team(g.possession,g).ratings, b=team(other(g.possession),g).ratings
   const skill=o.kind==='run'?(a.rb+a.line-b.rush-78)/14:(a.qb+a.wr-b.cover-78)/14
   const assessment=assessMatchup(o,d),edge=assessment.edge
   const profile=probabilities(o,d,edge,skill,g.toGo,g.yard,g.down)
@@ -77,19 +86,19 @@ function addLog(g:Game,line:string){return [line,...g.log].slice(0,12)}
 function startNextPeriod(g:Game,nextQuarter:2|3|4):Game{
   if(nextQuarter!==3)return {...g,quarter:nextQuarter,seconds:180,pendingPeriod:undefined,log:addLog(g,`Quarter ${nextQuarter} begins.`)}
   const receiver=other(g.openingReceiver)
-  return {...g,quarter:3,seconds:180,pendingPeriod:undefined,phase:'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,`Halftime kickoff: ${team(receiver).short} receives at its 25.`)}
+  return {...g,quarter:3,seconds:180,pendingPeriod:undefined,phase:'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,`Halftime kickoff: ${team(receiver,g).short} receives at its 25.`)}
 }
 export function finish(g:Game,result:Result,seed:number):Game {
   const time=advanceClock(g,result.clock), p=g.possession, opp=other(p)
   const offensiveName=offenseById(result.offense)?.name??result.offense
   const defensiveName=defenseById(result.defense)?.name??result.defense.replace(/([A-Z])/g,' $1').replace(/^./,x=>x.toUpperCase())
   const base:Game={...g,phase:'select',seed,quarter:time.quarter,seconds:time.seconds,pendingPeriod:undefined,snap:g.snap+1,last:result,history:[{snap:g.snap+1,mine:p==='home'?offensiveName:defensiveName,theirs:p==='home'?defensiveName:offensiveName,outcome:result.text},...g.history],recent:[...g.recent,result.offense].slice(-5),ballStart:g.yard,ballEnd:Math.max(0,Math.min(100,g.yard+result.yards))}
-  const call=`${team(p).short} ${offensiveName} vs ${defensiveName}: ${result.text}`
+  const call=`${team(p,g).short} ${offensiveName} vs ${defensiveName}: ${result.text}`
   base.log=addLog(g,call)
-  if(result.touchdown){base.score={...g.score,[p]:g.score[p]+6};base.log=addLog({...g,log:base.log},`${team(p).short} touchdown! (+6) Choose an extra-point attempt.`);base.conversion={team:p,stage:'choice'};base.pendingPeriod=time.nextQuarter;base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
+  if(result.touchdown){base.score={...g.score,[p]:g.score[p]+6};base.log=addLog({...g,log:base.log},`${team(p,g).short} touchdown! (+6) Choose an extra-point attempt.`);base.conversion={team:p,stage:'choice'};base.pendingPeriod=time.nextQuarter;base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
   else if(result.safety){base.score={...g.score,[opp]:g.score[opp]+2};base.possession=opp;base.yard=25;base.down=1;base.toGo=10;base.drive++;base.recent=[]}
   else if(result.turnover){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[]}
-  else if(g.down===4&&!result.firstDown){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[];base.last={...result,text:`${result.text} Turnover on downs.`};base.history[0].outcome=base.last.text;base.log=addLog({...g,log:base.log},`Turnover on downs — ${team(opp).short} takes over at its ${base.yard}.`)}
+  else if(g.down===4&&!result.firstDown){base.possession=opp;base.yard=Math.max(1,Math.min(99,100-g.yard-result.yards));base.down=1;base.toGo=Math.min(10,100-base.yard);base.drive++;base.recent=[];base.last={...result,text:`${result.text} Turnover on downs.`};base.history[0].outcome=base.last.text;base.log=addLog({...g,log:base.log},`Turnover on downs — ${team(opp,g).short} takes over at its ${base.yard}.`)}
   else {base.yard=Math.max(1,Math.min(99,g.yard+result.yards));base.down=result.firstDown?1:g.down+1;base.toGo=result.firstDown?Math.min(10,100-base.yard):Math.max(1,g.toGo-result.yards)}
   if(time.finished&&!base.conversion){base.phase='final';base.log=addLog({...g,log:base.log},'Final whistle.')} 
   return time.nextQuarter&&!base.conversion?startNextPeriod(base,time.nextQuarter):base
@@ -132,7 +141,7 @@ export function attemptTwo(g:Game,attackId:string,defendId:string,assignmentModi
 export function completeConversion(g:Game):Game{
   if(g.conversion?.stage!=='result')throw new Error('Conversion result is not final')
   const receiver=other(g.conversion.team),finished=g.quarter===4&&g.seconds<=0
-  const next:Game={...g,conversion:undefined,phase:finished?'final':'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,finished?'Final whistle.':g.pendingPeriod===3?'Conversion complete. Halftime.':`${team(receiver).short} receives the kickoff at its 25.`)}
+  const next:Game={...g,conversion:undefined,phase:finished?'final':'select',possession:receiver,yard:25,down:1,toGo:10,drive:g.drive+1,recent:[],selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:addLog(g,finished?'Final whistle.':g.pendingPeriod===3?'Conversion complete. Halftime.':`${team(receiver,g).short} receives the kickoff at its 25.`)}
   return g.pendingPeriod?startNextPeriod(g.pendingPeriod===3?{...next,drive:g.drive}:next,g.pendingPeriod):next
 }
 export function opponentSpecial(g:Game):'punt'|'fieldGoal'|null {
@@ -157,7 +166,7 @@ export function special(g:Game,kind:'punt'|'fieldGoal',defenseCall?:string):Game
   const returnYards=kind==='punt'&&!blocked&&!touchback&&defenseCall!=='puntBlock'&&defenseCall!=='puntSafe'?Math.min(15,Math.max(0,catchYard-1)):0
   const endYard=catchYard-returnYards
   const punt=kind==='punt'&&!blocked?{catchYard,endYard,returnYards,touchback}:undefined
-  const line=blocked?`${team(p).short} ${kind==='punt'?'punt':'field goal'} is blocked!`:kind==='punt'?`${team(p).short} punts ${puntYards} yards${touchback?' for a touchback':returnYards?`; ${team(opp).short} returns it ${returnYards} yards`:'; fair catch'}.`:good?`${team(p).short} makes a ${distance}-yard field goal! (+3)`:`${team(p).short} misses from ${distance} yards.`
+  const line=blocked?`${team(p,g).short} ${kind==='punt'?'punt':'field goal'} is blocked!`:kind==='punt'?`${team(p,g).short} punts ${puntYards} yards${touchback?' for a touchback':returnYards?`; ${team(opp,g).short} returns it ${returnYards} yards`:'; fair catch'}.`:good?`${team(p,g).short} makes a ${distance}-yard field goal! (+3)`:`${team(p,g).short} misses from ${distance} yards.`
   const target=blocked?Math.max(1,Math.min(99,100-g.yard+3)):kind==='punt'?touchback?20:Math.max(1,Math.min(99,100-endYard)):good?25:Math.max(20,100-g.yard)
   const kickingCall=kind==='punt'?'Punt':'Field Goal'
   const receivingCall=({puntReturn:'Punt Return',puntBlock:'Punt Block',puntSafe:'Punt Safe',fieldGoalBlock:'Field Goal Block',fieldGoalSafe:'Field Goal Safe'} as Record<string,string>)[defenseCall??'']??(kind==='punt'?'Punt Return':'Field Goal Block')

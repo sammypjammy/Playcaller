@@ -1,6 +1,23 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, completeConversion, finish, fresh, openingKickoff, opponentSpecial, resolve, selectAI, special } from './engine'
+import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, completeConversion, finish, fresh, openingKickoff, opponentFor, opponentSpecial, resolve, selectAI, special, team, teamIds, teams } from './engine'
+
+test('each selected team draws one of the other three and keeps its identity through kickoff and halftime',()=>{
+  for(const selected of teamIds){
+    const opponents=[0,.4,.8].map(draw=>opponentFor(selected,draw))
+    assert.equal(new Set(opponents).size,3)
+    assert.ok(opponents.every(id=>id!==selected))
+    for(const opponent of opponents){
+      const g=openingKickoff(fresh(9,selected,opponent),'away')
+      assert.equal(team('home',g).short,teams[selected].short)
+      assert.match(g.log[0],new RegExp(team('away',g).short))
+      const half=finish({...g,quarter:2,seconds:1},{yards:0,text:'No gain.',offense:'sbInside',defense:'cover3',turnover:false,touchdown:false,safety:false,firstDown:false,clock:29},10)
+      assert.equal(half.homeTeamId,selected)
+      assert.equal(half.awayTeamId,opponent)
+      assert.match(half.log[0],new RegExp(team('home',half).short))
+    }
+  }
+})
 
 test('a touchdown scores six and holds possession for the conversion',()=>{
   const g={...fresh(1),yard:96,toGo:4}

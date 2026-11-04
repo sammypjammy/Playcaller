@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Game, Result } from './engine'
 import type { ActivePlayer, Matchup } from './football'
 import SpriteAtlas from './SpriteAtlas'
-import { teamVisuals, type SpritePose } from './visuals'
+import { visualsFor, type SpritePose } from './visuals'
 import { blendPoint, huddlePositions, tackleAngle } from './fieldPresentation'
 import type { FlowPhase } from './flow'
 import { lateralY, turfBands, yardLines, yardX } from './fieldGeometry'
@@ -59,6 +59,7 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   return 'run'
 }
 export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,previousMatchup,resultText}:Props){
+  const teamVisuals=visualsFor(game.homeTeamId,game.awayTeamId)
   const shellRef=useRef<HTMLDivElement>(null)
   const [viewWidth,setViewWidth]=useState(700)
   useEffect(()=>{
@@ -143,7 +144,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   useEffect(()=>{let frame=0;const glide=()=>{const next=cameraRef.current+(targetCamera-cameraRef.current)*.18;cameraRef.current=Math.abs(next-targetCamera)<.15?targetCamera:next;setCamera(cameraRef.current);if(cameraRef.current!==targetCamera)frame=requestAnimationFrame(glide)};frame=requestAnimationFrame(glide);return()=>cancelAnimationFrame(frame)},[targetCamera])
   return <div className="fieldShell" ref={shellRef}>
     <svg viewBox={`0 0 ${viewWidth} 420`} role="img" aria-label={`American football field with ${players.length} individually positioned players`}>
-      <SpriteAtlas/>
+      <SpriteAtlas visuals={teamVisuals}/>
       <defs><pattern id="grain" width="13" height="11" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="2" height="1" fill="#a7cd7e" opacity=".25"/><rect x="9" y="8" width="2" height="1" fill="#173e31" opacity=".22"/></pattern><pattern id="endHatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 12 12 0" stroke="#fff" strokeOpacity=".1" strokeWidth="3"/></pattern><clipPath id="clip"><rect x="0" y="0" width={viewWidth} height="420"/></clipPath></defs>
       <g clipPath="url(#clip)"><g transform={`translate(${-camera} 0)`}>
         <rect width="1000" height="420" fill="#153e32"/>{turfBands.map((band,i)=><rect key={band.yard} x={band.x} y="15" width={band.width} height="390" fill={i%2?'#34764f':'#3b8157'}/>)}<rect y="15" width="1000" height="390" fill="url(#grain)"/>
@@ -154,7 +155,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
         {yardLines.map(({yard,x},i)=><g key={yard}><line x1={x} y1="23" x2={x} y2="397" stroke="#f4f5cf" strokeOpacity={i===0||i===20?1:.52} strokeWidth={i===0||i===20?3:1.5}/>{yard>0&&yard<100&&yard%10===0&&<><text x={x} textAnchor="middle" y="77" fill="#f4f5cf" opacity=".68" fontSize="24" fontFamily="monospace" fontWeight="900">{yard<=50?yard:100-yard}</text><text x={x} textAnchor="middle" y="364" fill="#f4f5cf" opacity=".68" fontSize="24" fontFamily="monospace" fontWeight="900">{yard<=50?yard:100-yard}</text></>}</g>)}
         {Array.from({length:99},(_,i)=>{const x=yardX(i+1);return <g key={`hash-${i}`} stroke="#edf1d8" strokeOpacity=".62" strokeWidth="1.4"><line x1={x} x2={x} y1="149" y2="158"/><line x1={x} x2={x} y1="262" y2="271"/></g>})}
         <path d="M0 23H1000M0 397H1000" stroke="#eef3db" strokeWidth="3"/>
-        <text x={yardX(-2)} y="218" textAnchor="middle" transform={`rotate(-90 ${yardX(-2)} 218)`} className="endzone">FOUNDRY</text><text x={yardX(102)} y="218" textAnchor="middle" transform={`rotate(90 ${yardX(102)} 218)`} className="endzone">BREAKERS</text>
+        <text x={yardX(-2)} y="218" textAnchor="middle" transform={`rotate(-90 ${yardX(-2)} 218)`} className="endzone">{teamVisuals.home.name}</text><text x={yardX(102)} y="218" textAnchor="middle" transform={`rotate(90 ${yardX(102)} 218)`} className="endzone">{teamVisuals.away.name}</text>
         {[yardX(-10),yardX(110)].map((x,i)=><g key={i} transform={`translate(${x} 210) scale(${i? -1:1} 1)`} strokeLinecap="square" fill="none"><path d="M0 0H34 M34 -38V38 M34 -38h10 M34 38h10" stroke="#553d29" strokeWidth="9"/><path d="M0 0H34 M34 -38V38 M34 -38h10 M34 38h10" stroke="#f4d784" strokeWidth="5"/><circle cx="34" cy="0" r="3" fill="#fff0aa"/></g>)}
         <line x1={world(game.yard)} y1="23" x2={world(game.yard)} y2="397" stroke="#76d7e7" strokeWidth="3" strokeDasharray="8 5" opacity=".95"/>
         <line x1={world(Math.min(100,game.yard+game.toGo))} y1="23" x2={world(Math.min(100,game.yard+game.toGo))} y2="397" stroke="#f7d76d" strokeWidth="3" opacity=".95"/>
@@ -172,6 +173,6 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
     </svg>
     <div className="fieldOverlay"><span className="liveDot"/>{flow==='HUDDLE'?'IN THE HUDDLE':flow==='PLAY_SELECTED'||flow==='BREAKING_HUDDLE'?'BREAKING HUDDLE':flow==='LINING_UP'?'LINING UP':flow==='READY_FOR_SNAP'?'READY FOR SNAP':flow==='PLAY_RUNNING'?'PLAY IN MOTION':flow==='PLAY_ENDING'?'WHISTLE':flow==='SHOWING_RESULT'?'PLAY RESULT':'RETURNING TO HUDDLE'} · 11 V 11</div>
     {flow==='SHOWING_RESULT'&&<div className="fieldResult" role="status">{resultText}</div>}
-    {debug&&<div className="debugOverlay"><b>FORMATION DEBUG · {matchup.formation.name} {matchup.personnel.code} / {matchup.look.name}</b><div className="debugRows">{players.map(p=><div key={p.id}><strong>{p.team==='home'?'ICF':'BAY'} #{p.jersey} {p.name}</strong><span>{p.id} · {p.position} → {p.formationRole} · {p.assignment.kind}{p.assignment.gap?` ${p.assignment.gap}`:''}{p.assignment.zone?` ${p.assignment.zone}`:''}{p.assignment.target?` → ${p.assignment.target}`:''}{p.assignment.route?` ${p.assignment.route}`:''} · {p.field.yard.toFixed(1)}, {p.field.lateral.toFixed(1)} · {p.eligible?'eligible':'ineligible'} · {p.state}</span></div>)}</div></div>}
+    {debug&&<div className="debugOverlay"><b>FORMATION DEBUG · {matchup.formation.name} {matchup.personnel.code} / {matchup.look.name}</b><div className="debugRows">{players.map(p=><div key={p.id}><strong>{teamVisuals[p.team].abbr} #{p.jersey} {p.name}</strong><span>{p.id} · {p.position} → {p.formationRole} · {p.assignment.kind}{p.assignment.gap?` ${p.assignment.gap}`:''}{p.assignment.zone?` ${p.assignment.zone}`:''}{p.assignment.target?` → ${p.assignment.target}`:''}{p.assignment.route?` ${p.assignment.route}`:''} · {p.field.yard.toFixed(1)}, {p.field.lateral.toFixed(1)} · {p.eligible?'eligible':'ineligible'} · {p.state}</span></div>)}</div></div>}
   </div>
 }

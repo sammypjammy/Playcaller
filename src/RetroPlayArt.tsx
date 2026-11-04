@@ -1,5 +1,7 @@
 import type { ActivePlayer, Matchup } from './football'
 import { assignmentPath } from './assignmentPath'
+import type { Side } from './engine'
+import type { TeamVisual } from './visuals'
 
 const ink=['#ffdb78','#f5a874','#9fd6d8','#e9efb5','#d7b4d8']
 const label=(p:ActivePlayer)=>{
@@ -21,7 +23,7 @@ const label=(p:ActivePlayer)=>{
   return a.target??a.kind
 }
 
-export default function RetroPlayArt({matchup,side}:{matchup:Matchup;side:'offense'|'defense'}){
+export default function RetroPlayArt({matchup,side,visuals}:{matchup:Matchup;side:'offense'|'defense';visuals:Record<Side,TeamVisual>}){
   const los=matchup.offense.find(p=>p.position==='C')?.preSnap.yard??matchup.offense[0].preSnap.yard
   const special=matchup.playId==='punt'||matchup.playId==='fieldGoal'
   const scale=special?12:22
@@ -76,7 +78,7 @@ export default function RetroPlayArt({matchup,side}:{matchup:Matchup;side:'offen
       })}
       {!defending&&back&&qb&&<path d={`M${x(qb.preSnap.yard)} ${y(qb.preSnap.lateral)}L${x(back.preSnap.yard+1)} ${y(back.preSnap.lateral)}`} stroke="#ffdb78" strokeWidth="3" strokeDasharray="6 5" markerEnd="url(#chalkArrow)"/>}
       {!defending&&special&&kicker&&<><path d={`M${x(c?.preSnap.yard??los)} ${y(0)}L${x(punt?kicker.preSnap.yard:holder?.preSnap.yard??kicker.preSnap.yard)} ${y(punt?0:holder?.preSnap.lateral??0)}`} stroke="#ffdb78" strokeWidth="3" strokeDasharray="6 5"/><path d={`M${x(punt?kicker.preSnap.yard:holder?.preSnap.yard??kicker.preSnap.yard)} ${y(punt?0:holder?.preSnap.lateral??0)}L${x(los+(punt?45:55))} ${y(0)}`} stroke="#ffdb78" strokeWidth="4" strokeDasharray="11 7" markerEnd="url(#chalkArrow)"/><text x={x(los+23)} y={y(0)-15} className="retroArtKick">{punt?'PUNT FLIGHT':'KICK FLIGHT'}</text>{punt&&returner&&<><circle cx={x(los+45)} cy={y(0)} r="11" fill="#86d3d7" stroke="#ebf5de" strokeWidth="3"/><text x={x(los+45)} y={y(0)+4} textAnchor="middle" className="retroArtPlayerText">R</text><path d={`M${x(los+45)} ${y(0)}L${x(los+33)} ${y(0)}`} stroke="#9fd6d8" strokeWidth="4" markerEnd="url(#blueChalkArrow)"/><text x={x(los+34)} y={y(0)+28} className="retroArtKick">RETURN</text></>}</>}
-      {players.map((p,i)=><g key={p.id} transform={`translate(${x(p.preSnap.yard)} ${y(p.preSnap.lateral)})`}><rect x="-15" y="-15" width="30" height="30" fill={defending?'#78c5ce':'#b75c3e'} stroke="#f7e5af" strokeWidth="3"/><text textAnchor="middle" y="0" className="retroArtPlayerText">{p.position}</text><text x="9" y="11" textAnchor="middle" className="retroArtNumber">{i+1}</text><title>{p.formationRole}: {label(p)}</title></g>)}
+      {players.map((p,i)=><g key={p.id} transform={`translate(${x(p.preSnap.yard)} ${y(p.preSnap.lateral)})`}><rect x="-15" y="-15" width="30" height="30" fill={visuals[p.team].primary} stroke={visuals[p.team].secondary} strokeWidth="3"/><text textAnchor="middle" y="0" className="retroArtPlayerText">{p.position}</text><text x="9" y="11" textAnchor="middle" className="retroArtNumber">{i+1}</text><title>{p.formationRole}: {label(p)}</title></g>)}
     </svg><aside className="retroArtAssignments"><b>{defending?'DEFENSIVE JOBS':'PLAYER JOBS'}</b><div>{players.map((p,i)=><span key={p.id}><em>{i+1}</em><strong>{p.position}</strong><small><b>{p.formationRole}</b> · {label(p)}</small></span>)}</div></aside></div>
   </div>
 }

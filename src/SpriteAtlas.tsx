@@ -1,4 +1,5 @@
-import { teamVisuals, type SpritePose, type TeamVisual } from './visuals'
+import { type SpritePose, type TeamVisual } from './visuals'
+import type { Side } from './engine'
 
 const poses:SpritePose[]=['idle','set','run','sprint','block','pass','catch','tackle','fall','celebrate']
 function PixelSprite({v,pose}:{v:TeamVisual;pose:SpritePose}){
@@ -23,4 +24,4 @@ function PixelSprite({v,pose}:{v:TeamVisual;pose:SpritePose}){
   </g>
 }
 function Body({v,pose}:{v:TeamVisual;pose:SpritePose}){return <g><rect x="3" y="8" width="11" height="4" fill={v.secondary}/><rect x="4" y="8" width="9" height="7" fill={v.primary}/><rect x="4" y="8" width="2" height="3" fill={v.secondary}/><rect x="11" y="8" width="2" height="3" fill={v.secondary}/><rect x="7" y="10" width="3" height="3" fill={v.secondary}/><rect x="5" y="14" width="7" height="2" fill={v.pants}/>{pose==='tackle'&&<rect x="12" y="11" width="3" height="2" fill={v.secondary}/>}</g>}
-export default function SpriteAtlas(){return <defs>{Object.values(teamVisuals).flatMap(v=>poses.map(pose=><symbol id={`player-${v.id}-${pose}`} key={`${v.id}-${pose}`} viewBox="0 0 18 20" overflow="visible"><PixelSprite v={v} pose={pose}/></symbol>))}</defs>}
+export default function SpriteAtlas({visuals}:{visuals:Record<Side,TeamVisual>}){return <defs>{Object.values(visuals).flatMap(v=>poses.map(pose=><symbol id={`player-${v.id}-${pose}`} key={`${v.id}-${pose}`} viewBox="0 0 18 20" overflow="visible"><PixelSprite v={v} pose={pose}/></symbol>))}</defs>}
