@@ -8,7 +8,7 @@ import type { FlowPhase } from './flow'
 import { lateralY, turfBands, yardLines, yardX } from './fieldGeometry'
 import { conversionReturnYard, replayTacklerPosition } from './replay'
 import { assignmentPath, pointOnPath } from './assignmentPath'
-import { normalBallPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
+import { normalBallPosition, pursuitPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
 
 type Props={game:Game;matchup:Matchup;progress:number;debug:boolean;flow:FlowPhase;fromMatchup:Matchup|null;previousMatchup:Matchup|null;resultText:string}
 function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string,qbStart:ActivePlayer['preSnap']):ActivePlayer {
@@ -89,13 +89,18 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const played=[...matchup.offense,...matchup.defense].map(p=>motion(p,game.last,runProgress,matchup.playId,qbStart))
   const replay=game.last?.replay
   const runner=played.find(p=>p.id===replay?.carrierId)
+  const receiver=matchup.offense.find(p=>p.id===replay?.receiverId)
+  const atCatch=receiver&&replay?.event==='completion'?routePosition(receiver,replay,.65):undefined
+  const carrierTravel=runner&&atCatch?Math.hypot(runner.field.yard-atCatch.yard,runner.field.lateral-atCatch.lateral):0
   for(const p of played.filter(p=>p.team!==matchup.offense[0].team)){
     if(replay?.interceptorId===p.id){const catchSpot={yard:replay.targetYard,lateral:replay.catchLateral??replay.targetLateral};p.field=runProgress<.65?blendPoint(p.preSnap,catchSpot,Math.min(1,runProgress/.65)):blendPoint(catchSpot,{yard:replay.returnEndYard??replay.targetYard,lateral:replay.targetLateral},Math.min(1,(runProgress-.65)/.29));continue}
     if(p.assignment.kind==='man'&&p.assignment.target){const receiver=played.find(x=>x.id===p.assignment.target);if(receiver)p.field=blendPoint(p.field,{yard:receiver.field.yard+1.5,lateral:receiver.field.lateral},runProgress*.72)}
     else if(['zone','deepSafety'].includes(p.assignment.kind))p.field={yard:p.preSnap.yard+(p.assignment.kind==='deepSafety'?2:3)*runProgress,lateral:p.preSnap.lateral+(p.assignment.zone?.includes('left')?-2:2)*runProgress}
     else if(runner&&['runGap','runSupport','edgeContain','qbSpy','passRush','blitz'].includes(p.assignment.kind))p.field=blendPoint(p.field,{yard:runner.field.yard+1,lateral:runner.field.lateral},runProgress*.5)
-    if(replay?.event==='completion'&&runner&&runProgress>.65&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:runner.field.yard-1,lateral:runner.field.lateral},Math.min(.55,(runProgress-.65)*1.8))
-    if(replay?.contact&&replay.event!=='interception'&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
+    if(replay?.event==='completion'&&runner&&atCatch&&runProgress>.65){
+      const catchPose=motion(p,game.last,.65,matchup.playId,qbStart)
+      p.field=pursuitPosition(catchPose.field,runner.field,carrierTravel,p.ratings.speed,runner.ratings.speed)
+    }else if(replay?.contact&&replay.event!=='interception'&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
   }
   if(replay?.event==='interception'&&runProgress>.65){const pick=played.find(p=>p.id===replay.interceptorId);if(pick)for(const p of played.filter(p=>p.team===matchup.offense[0].team&&p.id!==replay.tacklerId))p.field=blendPoint(p.field,{yard:pick.field.yard+.7,lateral:pick.field.lateral},Math.min(.55,(runProgress-.65)*1.7))}
   const returnerId=game.last?.returnerId
@@ -123,7 +128,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
     if(flow==='BREAKING_HUDDLE'||flow==='LINING_UP')return {...p,field:game.possession==='home'&&p.team==='away'?p.preSnap:blendPoint(oldPositions.get(p.id)??huddles.get(p.id)??p.field,p.preSnap,lineupProgress)}
     if(flow==='READY_FOR_SNAP')return {...p,field:p.preSnap}
     if(flow==='RETURNING_TO_HUDDLE')return {...p,field:blendPoint(returningPositions.get(p.id)??p.preSnap,game.possession==='home'&&p.team==='away'?p.preSnap:huddles.get(p.id)??p.field,progress)}
-    if(tackler&&target&&p.id===tackler.id&&p.id!==returnerId)return {...p,field:replayTacklerPosition(p.preSnap,replay!,runProgress)}
+    if(tackler&&target&&p.id===tackler.id&&p.id!==returnerId&&replay?.event!=='completion')return {...p,field:replayTacklerPosition(p.preSnap,replay!,runProgress)}
     return p
   })
   const thrower=players.find(p=>['QB','P','H'].includes(p.position)&&p.team===matchup.offense[0].team)

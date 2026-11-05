@@ -3,7 +3,7 @@ import test from 'node:test'
 import { buildMatchup } from './football'
 import { fresh, resolve, type Result } from './engine'
 import { buildReplay } from './replay'
-import { normalBallPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
+import { normalBallPosition, pursuitPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
 
 const outcome=(offense:string,event:NonNullable<Result['event']>,yards:number):Result=>({offense,defense:'cover3',event,yards,text:'test',turnover:false,touchdown:false,safety:false,firstDown:false,clock:19})
 
@@ -33,6 +33,28 @@ test('receiver runs the assigned route to the catch, then gains yards after it',
   assert.ok(finished.yard-caught.yard>10)
   const ball=normalBallPosition(plan,scene.offense.find(p=>p.position==='C')!.preSnap,scene.offense.find(p=>p.position==='QB')!.preSnap,finished,undefined,1)
   assert.equal(ball.yard,finished.yard)
+})
+
+test('a mesh catch continues across the field before turning upfield',()=>{
+  const scene=buildMatchup('home','shotgunSpread','look43','sgMesh','cover3',25)
+  const plan=buildReplay(outcome('sgMesh','completion',30),scene,25)
+  const receiver=scene.offense.find(p=>p.id===plan.receiverId)!
+  const caught=routePosition(receiver,plan,.65)
+  const crossing=routePosition(receiver,plan,.8)
+  const upfield=routePosition(receiver,plan,.9)
+  const finished=routePosition(receiver,plan,1)
+  assert.ok(Math.abs(crossing.lateral-caught.lateral)>1)
+  assert.ok(Math.abs(upfield.lateral-finished.lateral)<.01)
+  assert.ok(finished.yard>upfield.yard)
+  assert.equal(finished.yard,55)
+})
+
+test('pursuers with equal speed cover at most the same post-catch distance',()=>{
+  const start={yard:25,lateral:10},carrier={yard:45,lateral:0}
+  const equal=pursuitPosition(start,carrier,10,84,84)
+  const slower=pursuitPosition(start,carrier,10,70,84)
+  assert.ok(Math.abs(Math.hypot(equal.yard-start.yard,equal.lateral-start.lateral)-10)<.01)
+  assert.ok(slower.yard<equal.yard)
 })
 
 test('outside runs stretch laterally while inside runs hit near the center',()=>{

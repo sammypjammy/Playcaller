@@ -6,6 +6,13 @@ import { clamp } from './strategy'
 
 const blend=(a:Coordinate,b:Coordinate,t:number):Coordinate=>({yard:a.yard+(b.yard-a.yard)*clamp(t,0,1),lateral:a.lateral+(b.lateral-a.lateral)*clamp(t,0,1)})
 
+// Equal speed ratings allow equal travel after the catch.
+export function pursuitPosition(start:Coordinate,target:Coordinate,carrierTravel:number,defenderSpeed:number,carrierSpeed:number):Coordinate{
+  const gap=Math.hypot(target.yard-start.yard,target.lateral-start.lateral)
+  if(gap===0)return start
+  return blend(start,target,Math.min(1,carrierTravel*(defenderSpeed/Math.max(1,carrierSpeed))/gap))
+}
+
 export function quarterbackPosition(qb:ActivePlayer,plan:ReplayPlan|undefined,playId:string,progress:number):Coordinate{
   const t=clamp(progress,0,1),start=qb.preSnap
   if(!plan)return start
@@ -48,7 +55,14 @@ export function routePosition(receiver:ActivePlayer,plan:ReplayPlan|undefined,pr
     const routePoint=pointOnPath(path,routeFraction)
     const onRoute={yard:receiver.preSnap.yard+routePoint.forward,lateral:receiver.preSnap.lateral+routePoint.lateral}
     if(t<=.65)return onRoute
-    return blend({yard:plan.catchYard??onRoute.yard,lateral:plan.catchLateral??onRoute.lateral},{yard:plan.endYard,lateral:plan.targetLateral},(t-.65)/.29)
+    // Finish the remaining route before turning toward the end zone. A short
+    // gain can stop partway through the route without reversing direction.
+    const exitFraction=plan.routeExitProgress??plan.routeProgress??1
+    const exitPoint=pointOnPath(path,exitFraction)
+    const exit={yard:receiver.preSnap.yard+exitPoint.forward,lateral:receiver.preSnap.lateral+exitPoint.lateral}
+    const catchSpot={yard:plan.catchYard??onRoute.yard,lateral:plan.catchLateral??onRoute.lateral}
+    if(t<.82)return blend(catchSpot,exit,(t-.65)/.17)
+    return blend(exit,{yard:plan.endYard,lateral:plan.targetLateral},(t-.82)/.18)
   }
   const point=pointOnPath(path,clamp((t-.08)/.78,0,1))
   return {yard:receiver.preSnap.yard+point.forward,lateral:receiver.preSnap.lateral+point.lateral}
