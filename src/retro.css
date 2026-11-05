@@ -383,3 +383,21 @@ main{padding:12px 22px 32px}
   .retroArtAssignments span{grid-template-columns:20px 30px minmax(0,1fr);gap:4px;min-height:32px;font-size:10px}.retroArtAssignments strong,.retroArtAssignments small{font-size:10px}
 }
 @media (max-width:360px){.coach .callHead h1{font-size:23px}.callHead .callSnap{min-width:91px;font-size:17px}.team strong{font-size:13px}}
+
+/* Keep the live field in view while the phone page scrolls through calls. */
+@media (max-width:699px){
+  .layout{gap:7px}
+  .gameColumn{position:sticky;top:0;z-index:5;align-self:stretch;padding:5px 0 6px;background:#0b1512;box-shadow:0 7px 12px #07110ec9}
+  .gameColumn .fieldHeader{margin-bottom:3px}
+  .coach .callHead{padding:6px 9px 2px;align-items:center}
+  .coach .callHead .eyebrow{display:none}
+  .coach .callHead h1{font-size:24px;margin:0}
+  .callHead .callSnap{min-width:94px;min-height:40px;padding:4px 9px;font-size:18px}
+  .browseModes{margin:2px 8px 4px;gap:4px}
+  .browseModes button{min-height:36px;padding:5px 7px;font-size:11px}
+  .formationPicker{margin:0 8px 5px}
+  .formationPicker label{font-size:0}
+  .formationPicker select{min-height:38px;margin-top:0;padding:5px 7px;font-size:12px}
+  .coach .folderList{margin:0 8px 8px}
+}
+@media (max-width:360px){.coach .callHead h1{font-size:22px}.callHead .callSnap{min-width:86px;font-size:16px}}
