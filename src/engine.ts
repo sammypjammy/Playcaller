@@ -68,6 +68,9 @@ export function resolve(g: Game, attackId: string, defendId: string, assignmentM
   const noise=(draws[3]+draws[4]-1)*(o.kind==='run'?8:13)
   let yards=event==='incomplete'||event==='interception'||event==='fumble'?0:event==='sack'?-Math.round(2+draws[3]*7):Math.round(o.base+edge*1.5+skill+assignmentModifier*.55+noise-(o.fake?2:0))
   yards=clamp(yards,-9,o.kind==='pass'?35:22)
+  // A loss on a normal downfield pass means the quarterback was caught
+  // before the throw, not a completed route that ended behind the snap.
+  if(event==='completion'&&yards<0)event='sack'
   const wideOpen=o.kind==='pass'&&event==='completion'&&(edge>0||d.kind==='blitz'||d.concept==='cover0')
   if(wideOpen&&draws[4]>.955)yards=Math.max(yards,Math.round(48+draws[3]*36+(a.wr-b.cover)/10))
   const interception=event==='interception',fumble=event==='fumble',incomplete=event==='incomplete'

@@ -1,6 +1,31 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, completeConversion, finish, fresh, openingKickoff, opponentFor, opponentSpecial, resolve, selectAI, special, team, teamIds, teams } from './engine'
+import { buildMatchup } from './football'
+import { buildReplay, replayTacklerPosition } from './replay'
+import { quarterbackPosition } from './playMotion'
+
+test('play-action losses are sacks, never completed passes behind the line',()=>{
+  let losses=0
+  for(let seed=0;seed<5000;seed++){
+    const {result}=resolve(fresh(seed),'sbPACross','d43Cover3')
+    assert.ok(result.event!=='completion'||result.yards>=0)
+    if(result.event==='sack'&&result.yards<0){
+      losses++
+      assert.match(result.text,/Sacked for/)
+      if(losses===1){
+        const scene=buildMatchup('home','singleDoubles','look43','sbPACross','d43Cover3',25)
+        const plan=buildReplay(result,scene,25)
+        const qb=scene.offense.find(p=>p.id===plan.carrierId)!
+        const tackler=scene.defense.find(p=>p.id===plan.tacklerId)!
+        const down=quarterbackPosition(qb,plan,'sbPACross',1)
+        const hit=replayTacklerPosition(tackler.preSnap,plan,1)
+        assert.ok(Math.hypot(down.yard-hit.yard,down.lateral-hit.lateral)<1)
+      }
+    }
+  }
+  assert.ok(losses>0)
+})
 
 test('each selected team draws one of the other three and keeps its identity through kickoff and halftime',()=>{
   for(const selected of teamIds){

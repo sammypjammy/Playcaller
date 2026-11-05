@@ -50,6 +50,8 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   }
   if(progress===0)return ['OL','DL'].includes(p.position)?'set':'idle'
   if(returnerId&&p.id===returnerId)return 'sprint'
+  if(result?.event==='sack'&&p.id===targetId)return progress>.78?'fall':'pass'
+  if(result?.event==='sack'&&p.id===tacklerId)return progress>.72?'tackle':'sprint'
   const kind=p.assignment.kind
   if(kind==='ballCarry')return progress>.45?'sprint':'run'
   if(kind==='handoff'||kind==='playAction'||kind==='passing')return 'pass'
