@@ -11,12 +11,12 @@ import { assignmentPath, pointOnPath } from './assignmentPath'
 import { normalBallPosition, pursuitPosition, quarterbackPosition, routePosition, runnerPosition } from './playMotion'
 
 type Props={game:Game;matchup:Matchup;progress:number;debug:boolean;flow:FlowPhase;fromMatchup:Matchup|null;previousMatchup:Matchup|null;resultText:string}
-function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string,qbStart:ActivePlayer['preSnap']):ActivePlayer {
+export function motion(player:ActivePlayer,result:Result|undefined,progress:number,playId:string,qbStart:ActivePlayer['preSnap']):ActivePlayer {
   if(progress<=0)return player
   const assignment=player.assignment,kind=assignment.kind
   let forward=0,lateral=0
   const replay=result?.replay
-  if(player.position==='QB'&&replay){
+  if((player.position==='QB'||((player.position==='P'||player.position==='H')&&(kind==='passing'||kind==='playAction')))&&replay){
     const at=quarterbackPosition(player,replay,playId,progress)
     forward=at.yard-player.preSnap.yard;lateral=at.lateral-player.preSnap.lateral
   }
