@@ -20,7 +20,7 @@ function routeProgressAt(points:PathPoint[],forward:number){
 }
 
 // Resolve the visual participants once at the snap. The renderer only follows this plan.
-export function buildReplay(result:Result,matchup:Matchup,startYard:number):ReplayPlan{
+export function buildReplay(result:Result,matchup:Matchup,startYard:number,preferredReceiverId?:string):ReplayPlan{
   const event=result.event??(result.offense.toLowerCase().includes('pass')?'completion':'run')
   const endYard=clamp(startYard+result.yards,0,100)
   const offense=matchup.offense,defense=matchup.defense
@@ -30,7 +30,7 @@ export function buildReplay(result:Result,matchup:Matchup,startYard:number):Repl
   const passEvent=['completion','incomplete','interception'].includes(event)
   const concept=offenseById(result.offense)?.concept
   const intendedDepth=event==='completion'?concept==='mesh'?5:Math.max(2,Math.min(Math.max(0,result.yards)*.62,(offenseById(result.offense)?.base??8)+4)):Math.max(5,offenseById(result.offense)?.base??8)
-  const receiver=[...routes].sort((a,b)=>{
+  const receiver=routes.find(p=>p.id===preferredReceiverId)??[...routes].sort((a,b)=>{
     const aDepth=assignmentPath(a).at(-1)?.forward??0,bDepth=assignmentPath(b).at(-1)?.forward??0
     if(concept==='mesh')return Number(b.assignment.route==='cross')-Number(a.assignment.route==='cross')
       ||Math.abs(aDepth-intendedDepth)-Math.abs(bDepth-intendedDepth)

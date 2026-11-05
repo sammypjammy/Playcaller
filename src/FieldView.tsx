@@ -100,6 +100,9 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
     if(replay?.event==='completion'&&runner&&atCatch&&runProgress>.65){
       const catchPose=motion(p,game.last,.65,matchup.playId,qbStart)
       p.field=pursuitPosition(catchPose.field,runner.field,carrierTravel,p.ratings.speed,runner.ratings.speed)
+      if(p.id===replay.tacklerId&&runProgress>.88){
+        p.field=blendPoint(p.field,{yard:runner.field.yard+.3,lateral:runner.field.lateral+.3},(runProgress-.88)/.12)
+      }
     }else if(replay?.contact&&replay.event!=='interception'&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
   }
   if(replay?.event==='interception'&&runProgress>.65){const pick=played.find(p=>p.id===replay.interceptorId);if(pick)for(const p of played.filter(p=>p.team===matchup.offense[0].team&&p.id!==replay.tacklerId))p.field=blendPoint(p.field,{yard:pick.field.yard+.7,lateral:pick.field.lateral},Math.min(.55,(runProgress-.65)*1.7))}

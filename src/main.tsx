@@ -9,6 +9,7 @@ import { defenseBrowse, defenseById, defenseGroups, defensiveLookForCall, fakePl
 import { durationFor, flowReducer, initialFlow, isPlaying, isSelectionPhase, isSnapReady } from './flow'
 import { executionNote } from './strategy'
 import { buildReplay } from './replay'
+import { completionWithContact } from './completion'
 import { visualsFor } from './visuals'
 import './style.css'
 import './panel.css'
@@ -161,8 +162,9 @@ function App(){
     }
     const attack=g.possession==='home'?chosen:selectAI(g)
     const defend=g.possession==='home'?(isFake(chosen)?selectSpecialDefense(g,chosen.startsWith('fakePunt')?'punt':'fieldGoal'):selectAI(g)):chosen
-    const {result,seed}=resolve(g,attack,defend,assignmentEdge(previewMatchup))
-    result.replay=buildReplay(result,previewMatchup,g.yard)
+    const {result:rolled,seed}=resolve(g,attack,defend,assignmentEdge(previewMatchup))
+    const result=completionWithContact(rolled,previewMatchup,g.yard,g.toGo)
+    result.replay??=buildReplay(result,previewMatchup,g.yard)
     pending.current={kind:'normal',before:g,result,seed,label:result.text}
     setLiveMatchup(previewMatchup)
     setG({...g,phase:'animating',selected:chosen,seed,ballStart:g.yard,ballEnd:Math.max(0,Math.min(100,g.yard+result.yards))})
