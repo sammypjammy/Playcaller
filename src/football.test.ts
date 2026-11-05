@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { allTechniques, buildMatchup, buildOffense, buildSpecialMatchup, defensiveFronts, defensiveLooks, defensivePackages, offensiveFormations, personnel, rosters, validateMatchup, validateSpecialMatchup } from './football'
-import { defense, finish, fresh, opponentSpecial, resolve, selectAI, special } from './engine'
+import { attemptPAT, attemptTwo, chooseConversion, completeConversion, defense, finish, fresh, opponentSpecial, resolve, selectAI, special } from './engine'
 import { assignmentEdge } from './football'
 import { defenseGroups, defensiveLookForCall, fakePlays, offenseGroupFor, offenseGroups, offensivePlays, specialGroups } from './playbook'
 
@@ -72,6 +72,7 @@ test('every offensive formation combines with every defensive look',()=>{
 test('a complete exhibition keeps a validated 22-player matchup at every normal snap',()=>{
   let g=fresh(2187)
   for(let i=0;i<1000&&g.phase!=='final';i++){
+    if(g.conversion){const ready=chooseConversion(g,g.overtime?.mode==='shootout'?'two':'pat');g=completeConversion(ready.conversion?.mode==='two'?attemptTwo(ready,'sbInside','cover3'):attemptPAT(ready));continue}
     const kick=opponentSpecial(g)
     if(kick){g=special(g,kick,'puntReturn');continue}
     if(g.possession==='home'&&g.down===4){g=special(g,'punt');continue}

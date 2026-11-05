@@ -111,7 +111,7 @@ test('an exhibition reaches a final whistle with valid state',()=>{
     assert.ok(g.down>=1&&g.down<=4)
   }
   assert.equal(g.phase,'final')
-  assert.equal(g.quarter,4)
+  assert.ok(g.quarter>=4)
 })
 
 test('PATs add one on success, zero on a miss, and can award two on a blocked return',()=>{

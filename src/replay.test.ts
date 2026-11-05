@@ -48,7 +48,7 @@ test('resolved runs and passes supply replay endpoints without changing simulati
     const plan=buildReplay(outcome,scene,game.yard)
     assert.equal(plan.endYard,Math.max(0,Math.min(100,game.yard+outcome.yards)))
     if(['run','completion','sack'].includes(plan.event))assert.equal(replayCarrierYard(plan,1),plan.endYard)
-    if(plan.contact)assert.ok(scene.defense.some(p=>p.id===plan.tacklerId))
+    if(plan.contact)assert.ok((plan.event==='interception'?scene.offense:scene.defense).some(p=>p.id===plan.tacklerId))
   }
 })
 test('defensive return travels from the turnover spot to the opposite goal line',()=>{

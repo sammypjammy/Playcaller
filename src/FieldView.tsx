@@ -44,7 +44,7 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   if(flow==='BREAKING_HUDDLE'||flow==='LINING_UP'||flow==='RETURNING_TO_HUDDLE')return 'run'
   if(flow==='PLAY_ENDING'||flow==='SHOWING_RESULT'){
     if(returnerId&&p.id===returnerId)return result?.punt?'fall':'celebrate'
-    if(p.id===tacklerId)return result?.event==='interception'?'catch':'tackle'
+    if(p.id===tacklerId)return 'tackle'
     if(p.id===targetId){if(result?.touchdown)return 'celebrate';if(incomplete)return progress<.6?'catch':'fall';return progress<.25?'run':'fall'}
     return 'idle'
   }
@@ -53,6 +53,7 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   const kind=p.assignment.kind
   if(kind==='ballCarry')return progress>.45?'sprint':'run'
   if(kind==='handoff'||kind==='playAction'||kind==='passing')return 'pass'
+  if(result?.event==='interception'&&p.id===targetId)return progress>=.58&&progress<.7?'catch':progress>=.7?'sprint':'run'
   if(kind==='route')return p.id===targetId&&result?.event==='completion'?progress>=.57&&progress<.72?'catch':progress>=.72?'sprint':'run':progress>.55?'sprint':'run'
   if(['runBlock','passBlock','pullBlock','leadBlock','protection'].includes(kind))return 'block'
   if(['passRush','blitz','runGap','edgeContain','runSupport'].includes(kind))return 'sprint'
@@ -89,13 +90,14 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const replay=game.last?.replay
   const runner=played.find(p=>p.id===replay?.carrierId)
   for(const p of played.filter(p=>p.team!==matchup.offense[0].team)){
-    if(replay?.interceptorId===p.id){p.field=blendPoint(p.preSnap,{yard:replay.targetYard,lateral:replay.targetLateral},Math.min(1,runProgress/.65));continue}
+    if(replay?.interceptorId===p.id){const catchSpot={yard:replay.targetYard,lateral:replay.catchLateral??replay.targetLateral};p.field=runProgress<.65?blendPoint(p.preSnap,catchSpot,Math.min(1,runProgress/.65)):blendPoint(catchSpot,{yard:replay.returnEndYard??replay.targetYard,lateral:replay.targetLateral},Math.min(1,(runProgress-.65)/.29));continue}
     if(p.assignment.kind==='man'&&p.assignment.target){const receiver=played.find(x=>x.id===p.assignment.target);if(receiver)p.field=blendPoint(p.field,{yard:receiver.field.yard+1.5,lateral:receiver.field.lateral},runProgress*.72)}
     else if(['zone','deepSafety'].includes(p.assignment.kind))p.field={yard:p.preSnap.yard+(p.assignment.kind==='deepSafety'?2:3)*runProgress,lateral:p.preSnap.lateral+(p.assignment.zone?.includes('left')?-2:2)*runProgress}
     else if(runner&&['runGap','runSupport','edgeContain','qbSpy','passRush','blitz'].includes(p.assignment.kind))p.field=blendPoint(p.field,{yard:runner.field.yard+1,lateral:runner.field.lateral},runProgress*.5)
     if(replay?.event==='completion'&&runner&&runProgress>.65&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:runner.field.yard-1,lateral:runner.field.lateral},Math.min(.55,(runProgress-.65)*1.8))
-    if(replay?.contact&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
+    if(replay?.contact&&replay.event!=='interception'&&runProgress>.48&&p.id!==replay.tacklerId)p.field=blendPoint(p.field,{yard:replay.endYard,lateral:replay.targetLateral},(runProgress-.48)/.52*.35)
   }
+  if(replay?.event==='interception'&&runProgress>.65){const pick=played.find(p=>p.id===replay.interceptorId);if(pick)for(const p of played.filter(p=>p.team===matchup.offense[0].team&&p.id!==replay.tacklerId))p.field=blendPoint(p.field,{yard:pick.field.yard+.7,lateral:pick.field.lateral},Math.min(.55,(runProgress-.65)*1.7))}
   const returnerId=game.last?.returnerId
   const punt=game.last?.punt
   const puntReturner=punt?played.find(p=>p.id===returnerId):undefined
@@ -113,7 +115,7 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const receivingId=replay?.receiverId
   const incomplete=game.last?.event==='incomplete'
   const intercepted=game.last?.event==='interception'
-  const target=puntReturner??played.find(p=>p.id===replay?.carrierId)
+  const target=puntReturner??played.find(p=>p.id===(replay?.event==='interception'?replay.interceptorId:replay?.carrierId))
   const tackler=replay?.contact?played.find(p=>p.id===replay.tacklerId):undefined
   const angle=tackler&&target?tackleAngle(tackler.field,target.field):'front'
   const players=played.map(p=>{
