@@ -27,7 +27,7 @@ test('positive and negative runs finish at the simulated yard line with a partic
 })
 test('completion reaches catch point then the exact final spot, while incompletion leaves the spot unchanged',()=>{
   const completion=buildReplay(result(25,'completion'),matchup,25)
-  assert.equal(replayCarrierYard(completion,.65),completion.catchYard)
+  assert.equal(replayCarrierYard(completion,completion.catchAt!),completion.catchYard)
   assert.equal(replayCarrierYard(completion,1),50)
   const miss=buildReplay(result(0,'incomplete'),matchup,25)
   assert.equal(miss.endYard,25)

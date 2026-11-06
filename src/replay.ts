@@ -3,13 +3,23 @@ import type { ActivePlayer, Coordinate, Matchup } from './football'
 import { clamp } from './strategy'
 import { assignmentPath, pointOnPath, type PathPoint } from './assignmentPath'
 import { offenseById } from './playbook'
+import { runnerPath } from './playMotion'
 
 export type ReplayPlan={
   startYard:number;endYard:number;event:NonNullable<Result['event']>;
   carrierId?:string;receiverId?:string;tacklerId?:string;interceptorId?:string;returnerId?:string;
-  catchYard?:number;catchLateral?:number;routeProgress?:number;routeExitProgress?:number;returnEndYard?:number;targetYard:number;targetLateral:number;contact:boolean
+  catchYard?:number;catchLateral?:number;routeProgress?:number;routeExitProgress?:number;catchAt?:number;throwAt?:number;postCatchDistance?:number;durationMs?:number;returnEndYard?:number;targetYard:number;targetLateral:number;contact:boolean
 }
 const distance=(a:Coordinate,b:Coordinate)=>Math.hypot(a.yard-b.yard,(a.lateral-b.lateral)*.45)
+const pathDistance=(points:PathPoint[],from:number,to:number)=>{
+  let total=0,previous=pointOnPath(points,from)
+  for(let i=1;i<=24;i++){
+    const next=pointOnPath(points,from+(to-from)*i/24)
+    total+=Math.hypot(next.forward-previous.forward,next.lateral-previous.lateral)
+    previous=next
+  }
+  return total
+}
 function routeProgressAt(points:PathPoint[],forward:number){
   if(points.length<2||forward<=points[0].forward)return 0
   for(let i=0;i<points.length-1;i++){
@@ -53,20 +63,27 @@ export function buildReplay(result:Result,matchup:Matchup,startYard:number,prefe
   const gap=runner.assignment.gap??'A-right',gapSide=gap.endsWith('left')?-1:1
   const lane=gap.startsWith('D')?10:gap.startsWith('C')?5:gap.startsWith('B')?2.8:.9
   const targetLateral=event==='completion'?exitLateral:passEvent?catchLateral??0:event==='sack'?qb.preSnap.lateral:clamp(gapSide*lane,-23,23)
+  const postCatchDistance=event==='completion'?pathDistance(route,routeProgress,routeExitProgress)+Math.hypot(endYard-(receiver?.preSnap.yard??startYard)-exitPoint.forward,targetLateral-exitLateral):undefined
+  const preCatchMs=event==='completion'?Math.max(900,650+pathDistance(route,0,routeProgress)*65):0
+  const runPath=event==='run'||event==='fumble'?runnerPath(runner,qb.preSnap,{startYard,endYard,targetLateral},result.offense):[]
+  const runDistance=runPath.slice(1).reduce((total,point,i)=>total+Math.hypot(point.yard-runPath[i].yard,point.lateral-runPath[i].lateral),0)
+  const durationMs=event==='completion'?preCatchMs+Math.max(350,(postCatchDistance??0)*95):runPath.length?Math.max(900,350+runDistance*95):undefined
+  const catchAt=durationMs&&event==='completion'?preCatchMs/durationMs:undefined
+  const throwAt=catchAt&&durationMs?Math.max(.08,catchAt-380/durationMs):undefined
   const targetYard=passEvent?catchYard!:endYard
   const contact=!result.touchdown&&!result.safety&&['run','completion','sack','fumble','interception'].includes(event)
   const target={yard:event==='interception'?returnEndYard!:contact?endYard:targetYard,lateral:targetLateral}
   const tackler=contact?[...(event==='interception'?offense:defense)].sort((a,b)=>distance(a.preSnap,target)-distance(b.preSnap,target))[0]:undefined
   const catchSpot={yard:catchYard??targetYard,lateral:catchLateral??targetLateral}
   const interceptor=event==='interception'?[...defense].sort((a,b)=>distance(a.preSnap,catchSpot)-distance(b.preSnap,catchSpot))[0]:undefined
-  return {startYard,endYard,event,carrierId:carrier.id,receiverId:receiver?.id,tacklerId:tackler?.id,interceptorId:interceptor?.id,returnerId:result.conversionReturn?(interceptor??tackler??defense[0]).id:undefined,catchYard,catchLateral,routeProgress,routeExitProgress,returnEndYard,targetYard,targetLateral,contact}
+  return {startYard,endYard,event,carrierId:carrier.id,receiverId:receiver?.id,tacklerId:tackler?.id,interceptorId:interceptor?.id,returnerId:result.conversionReturn?(interceptor??tackler??defense[0]).id:undefined,catchYard,catchLateral,routeProgress,routeExitProgress,catchAt,throwAt,postCatchDistance,durationMs,returnEndYard,targetYard,targetLateral,contact}
 }
 
 export function replayCarrierYard(plan:ReplayPlan,progress:number):number{
   const t=clamp(progress,0,1)
   if(plan.event==='completion'){
-    const catchYard=plan.catchYard??plan.endYard
-    return t<.65?plan.startYard+(catchYard-plan.startYard)*clamp((t-.2)/.45,0,1):catchYard+(plan.endYard-catchYard)*clamp((t-.65)/.28,0,1)
+    const catchYard=plan.catchYard??plan.endYard,catchAt=plan.catchAt??.65
+    return t<catchAt?plan.startYard+(catchYard-plan.startYard)*clamp((t-.04)/(catchAt-.04),0,1):catchYard+(plan.endYard-catchYard)*clamp((t-catchAt)/(1-catchAt),0,1)
   }
   return plan.startYard+(plan.endYard-plan.startYard)*clamp(t/.9,0,1)
 }

@@ -22,7 +22,7 @@ export function flowReducer(state:FlowState,event:FlowEvent):FlowState{
 export const flowDurations={break:650,lineUp:750,run:1500,ending:700,result:1700,return:1000}
 export function durationFor(phase:FlowPhase,quick:boolean,result?:Result){
   const distance=Math.abs(result?.returnYards??result?.yards??0)
-  const runDuration=result?.punt?result.punt.returnYards?4200:3200:result?.conversionReturn?3800:result?.event==='incomplete'?1700:Math.max(1350,Math.min(3100,1350+distance*55+(result?.event==='completion'?300:0)))
+  const runDuration=result?.punt?result.punt.returnYards?4200:3200:result?.conversionReturn?3800:result?.replay?.durationMs??(result?.event==='incomplete'?1700:Math.max(1350,Math.min(3100,1350+distance*55+(result?.event==='completion'?300:0))))
   const base=phase==='BREAKING_HUDDLE'?flowDurations.break:phase==='LINING_UP'?flowDurations.lineUp:phase==='PLAY_RUNNING'?result?runDuration:flowDurations.run:phase==='PLAY_ENDING'?flowDurations.ending:phase==='SHOWING_RESULT'?flowDurations.result:phase==='RETURNING_TO_HUDDLE'?flowDurations.return:0
   return Math.round(base*(quick?.45:1))
 }

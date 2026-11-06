@@ -56,7 +56,10 @@ function pose(p:ActivePlayer,flow:FlowPhase,progress:number,result:Result|undefi
   if(kind==='ballCarry')return progress>.45?'sprint':'run'
   if(kind==='handoff'||kind==='playAction'||kind==='passing')return 'pass'
   if(result?.event==='interception'&&p.id===targetId)return progress>=.58&&progress<.7?'catch':progress>=.7?'sprint':'run'
-  if(kind==='route')return p.id===targetId&&result?.event==='completion'?progress>=.57&&progress<.72?'catch':progress>=.72?'sprint':'run':progress>.55?'sprint':'run'
+  if(kind==='route'){
+    const catchAt=result?.replay?.catchAt??.65
+    return p.id===targetId&&result?.event==='completion'?progress>=catchAt-.05&&progress<catchAt+.04?'catch':progress>=catchAt+.04?'sprint':'run':progress>.55?'sprint':'run'
+  }
   if(['runBlock','passBlock','pullBlock','leadBlock','protection'].includes(kind))return 'block'
   if(['passRush','blitz','runGap','edgeContain','runSupport'].includes(kind))return 'sprint'
   return 'run'
@@ -92,15 +95,16 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
   const replay=game.last?.replay
   const runner=played.find(p=>p.id===replay?.carrierId)
   const receiver=matchup.offense.find(p=>p.id===replay?.receiverId)
-  const atCatch=receiver&&replay?.event==='completion'?routePosition(receiver,replay,.65):undefined
-  const carrierTravel=runner&&atCatch?Math.hypot(runner.field.yard-atCatch.yard,runner.field.lateral-atCatch.lateral):0
+  const catchAt=replay?.catchAt??.65
+  const atCatch=receiver&&replay?.event==='completion'?routePosition(receiver,replay,catchAt):undefined
+  const carrierTravel=runner&&atCatch?(replay?.postCatchDistance??0)*Math.max(0,Math.min(1,(runProgress-catchAt)/(1-catchAt))):0
   for(const p of played.filter(p=>p.team!==matchup.offense[0].team)){
     if(replay?.interceptorId===p.id){const catchSpot={yard:replay.targetYard,lateral:replay.catchLateral??replay.targetLateral};p.field=runProgress<.65?blendPoint(p.preSnap,catchSpot,Math.min(1,runProgress/.65)):blendPoint(catchSpot,{yard:replay.returnEndYard??replay.targetYard,lateral:replay.targetLateral},Math.min(1,(runProgress-.65)/.29));continue}
     if(p.assignment.kind==='man'&&p.assignment.target){const receiver=played.find(x=>x.id===p.assignment.target);if(receiver)p.field=blendPoint(p.field,{yard:receiver.field.yard+1.5,lateral:receiver.field.lateral},runProgress*.72)}
     else if(['zone','deepSafety'].includes(p.assignment.kind))p.field={yard:p.preSnap.yard+(p.assignment.kind==='deepSafety'?2:3)*runProgress,lateral:p.preSnap.lateral+(p.assignment.zone?.includes('left')?-2:2)*runProgress}
     else if(runner&&['runGap','runSupport','edgeContain','qbSpy','passRush','blitz'].includes(p.assignment.kind))p.field=blendPoint(p.field,{yard:runner.field.yard+1,lateral:runner.field.lateral},runProgress*.5)
-    if(replay?.event==='completion'&&runner&&atCatch&&runProgress>.65){
-      const catchPose=motion(p,game.last,.65,matchup.playId,qbStart)
+    if(replay?.event==='completion'&&runner&&atCatch&&runProgress>catchAt){
+      const catchPose=motion(p,game.last,catchAt,matchup.playId,qbStart)
       p.field=pursuitPosition(catchPose.field,runner.field,carrierTravel,p.ratings.speed,runner.ratings.speed)
       if(p.id===replay.tacklerId&&runProgress>.88){
         p.field=blendPoint(p.field,{yard:runner.field.yard+.3,lateral:runner.field.lateral+.3},(runProgress-.88)/.12)
@@ -183,7 +187,6 @@ export default function FieldView({game,matchup,progress,debug,flow,fromMatchup,
         {ending&&incomplete&&<g transform={`translate(${ballX} ${ballY})`} opacity={1-progress*.6}><path d="M-11 4l-6 6M11 4l6 6M0 6v8" stroke="#f4e0a6" strokeWidth="2"/></g>}
       </g></g>
     </svg>
-    <div className="fieldOverlay"><span className="liveDot"/>{flow==='HUDDLE'?'IN THE HUDDLE':flow==='PLAY_SELECTED'||flow==='BREAKING_HUDDLE'?'BREAKING HUDDLE':flow==='LINING_UP'?'LINING UP':flow==='READY_FOR_SNAP'?'READY FOR SNAP':flow==='PLAY_RUNNING'?'PLAY IN MOTION':flow==='PLAY_ENDING'?'WHISTLE':flow==='SHOWING_RESULT'?'PLAY RESULT':'RETURNING TO HUDDLE'} · 11 V 11</div>
     {flow==='SHOWING_RESULT'&&<div className="fieldResult" role="status">{resultText}</div>}
     {debug&&<div className="debugOverlay"><b>FORMATION DEBUG · {matchup.formation.name} {matchup.personnel.code} / {matchup.look.name}</b><div className="debugRows">{players.map(p=><div key={p.id}><strong>{teamVisuals[p.team].abbr} #{p.jersey} {p.name}</strong><span>{p.id} · {p.position} → {p.formationRole} · {p.assignment.kind}{p.assignment.gap?` ${p.assignment.gap}`:''}{p.assignment.zone?` ${p.assignment.zone}`:''}{p.assignment.target?` → ${p.assignment.target}`:''}{p.assignment.route?` ${p.assignment.route}`:''} · {p.field.yard.toFixed(1)}, {p.field.lateral.toFixed(1)} · {p.eligible?'eligible':'ineligible'} · {p.state}</span></div>)}</div></div>}
   </div>

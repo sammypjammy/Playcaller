@@ -12,15 +12,15 @@ export function completionWithContact(result:Result,matchup:Matchup,startYard:nu
   const original=buildReplay(result,matchup,startYard)
   const receiver=matchup.offense.find(p=>p.id===original.receiverId)
   if(!receiver)return result
-  const firstCatch=routePosition(receiver,original,.65)
+  const firstCatch=routePosition(receiver,original,original.catchAt??.65)
   const defenders=matchup.defense
   for(let end=Math.max(startYard+result.yards,Math.ceil(firstCatch.yard));end<=100;end++){
     const yards=end-startYard
     const trial={...result,yards}
     const plan=buildReplay(trial,matchup,startYard,receiver.id)
-    const catchSpot=routePosition(receiver,plan,.65)
+    const catchSpot=routePosition(receiver,plan,plan.catchAt??.65)
     const carrier=routePosition(receiver,plan,1)
-    const travel=distance(catchSpot,carrier)
+    const travel=plan.postCatchDistance??distance(catchSpot,carrier)
     const available=defenders.map(defender=>({
       defender,
       gap:distance(defender.preSnap,carrier)-travel*defender.ratings.speed/receiver.ratings.speed
