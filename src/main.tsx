@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, clockText, completeConversion, defense, fieldPosition, finish, fresh, offense, openingKickoff, opponentFor, opponentSpecial, resolve, selectAI, selectSpecialDefense, special, team, teamIds, teams, type Game, type Play, type Result, type TeamId } from './engine'
+import { attemptPAT, attemptTwo, chooseAIConversion, chooseConversion, clockText, completeConversion, defense, finish, fresh, offense, openingKickoff, opponentFor, opponentSpecial, resolve, selectAI, selectSpecialDefense, special, team, teamIds, teams, type Game, type Play, type Result, type TeamId } from './engine'
 import FieldView from './FieldView'
 import { MiniPlayDiagram } from './PlayDiagram'
 import RetroPlayArt from './RetroPlayArt'
@@ -68,7 +68,6 @@ function App(){
   const debug=new URLSearchParams(window.location.search).has('debug')
   const [liveMatchup,setLiveMatchup]=useState<Matchup|null>(null)
   const [transitionFrom,setTransitionFrom]=useState<Matchup|null>(null)
-  const [playClock,setPlayClock]=useState(40)
   const pending=useRef<PendingPlay|null>(null)
   const visuals=visualsFor(g.homeTeamId,g.awayTeamId)
   const specialTransition=useRef(false)
@@ -117,6 +116,7 @@ function App(){
   const kickPAT=(choice:Game)=>{
     if(snapLock.current)return
     snapLock.current=true
+    setProgress(0)
     const before=chooseConversion(choice,'pat')
     const response=before.conversion?.team==='home'?selectSpecialDefense(before,'fieldGoal'):'fieldGoalSafe'
     const next=attemptPAT(before,response)
@@ -135,6 +135,7 @@ function App(){
   const start=()=>{
     if(coinToss||halftimeShow||!isSnapReady(flow.phase)||g.phase!=='select'||snapLock.current||g.conversion?.stage==='choice')return
     snapLock.current=true
+    setProgress(0)
     if(g.conversion){
       if(g.conversion.mode!=='two'||g.conversion.stage!=='pick')return
       const attack=g.possession==='home'?chosen:selectAI(g)
@@ -202,11 +203,10 @@ function App(){
   },[flow.phase,flow.revision,speed])
   useEffect(()=>{if(g.conversion?.stage==='choice'&&g.conversion.team==='away'&&flow.phase==='HUDDLE'){const mode=chooseAIConversion(g);if(mode==='pat')kickPAT(g);else setG(chooseConversion(g,'two'))}},[g.conversion?.stage,g.snap,flow.phase])
   useEffect(()=>{if(halftimeSeen.current||flow.phase!=='HUDDLE'||g.quarter!==3||g.seconds!==180||!g.log[0]?.startsWith('Halftime kickoff'))return;halftimeSeen.current=true;setHalftimeShow(true);const timer=setTimeout(()=>setHalftimeShow(false),5600);return()=>clearTimeout(timer)},[flow.phase,g.quarter,g.seconds,g.log])
-  useEffect(()=>{if(coinToss||halftimeShow||g.phase!=='select'||g.conversion)return;setPlayClock(40);const timer=setInterval(()=>setPlayClock(n=>Math.max(0,n-1)),1000);return()=>clearInterval(timer)},[coinToss,halftimeShow,g.snap,g.phase,g.conversion?.stage])
   useEffect(()=>{if(defenseFocus==='special'&&!predictedKick)setDefenseFocus('pass')},[defenseFocus,predictedKick])
   useEffect(()=>{if(g.conversion?.mode==='two'&&g.conversion.stage==='pick'&&playType==='special')setPlayType('run')},[g.conversion?.stage,g.conversion?.mode,playType])
   useEffect(()=>{setFolder(g.possession==='home'?(browseView==='type'?playType:offFormation):defLook)},[g.possession,browseView,playType])
-  const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;halftimeSeen.current=false;setHalftimeShow(false);setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setPlayClock(40);setCoinToss(true);setTeamChosen(false);setG(fresh());dispatch('RESET')}
+  const restart=()=>{snapLock.current=false;pending.current=null;specialTransition.current=false;halftimeSeen.current=false;setHalftimeShow(false);setProgress(0);setLiveMatchup(null);setTransitionFrom(null);setCoinToss(true);setTeamChosen(false);setG(fresh());dispatch('RESET')}
   const selectTeam=(id:TeamId)=>{const random=crypto.getRandomValues(new Uint32Array(2));const opponent=opponentFor(id,random[1]/4294967296);setG(fresh(random[0],id,opponent));setTeamChosen(true)}
   const beginGame=(receiver:'home'|'away')=>{setG(openingKickoff(g,receiver));setCoinToss(false);setDefenseFocus('pass');setFolder(offFormation);dispatch('RESET')}
   const feedbackOffense=offenseById(g.last?.offense??'')?.name??offensiveSpecial.find(p=>p.id===g.last?.offense)?.name??g.last?.offense
@@ -232,7 +232,7 @@ function App(){
   const playResult=flow.phase==='SHOWING_RESULT'?resultLabel(pending.current):''
   return <div className="app">
     <main>
-      <section className="scoreboard" aria-label="Scoreboard"><div className={`team home ${g.possession==='home'&&!coinToss?'hasBall':''}`} style={{borderColor:team('home',g).color}}><span className="teamName">{team('home',g).short}</span><b>{g.score.home}</b></div><div className="centerScore"><span>{g.overtime?.mode==='shootout'?`${g.overtime.round+1}OT`:g.overtime?'OT':`Q${g.quarter}`} · {g.overtime?.mode==='shootout'?'—':clockText(g.seconds)}</span><strong>{situation}</strong><small>{!teamChosen?'SELECT TEAM':coinToss?'COIN TOSS':g.phase==='final'?'FINAL':g.conversion?'CONVERSION':`${fieldPosition(g.yard)} · ${String(playClock).padStart(2,'0')}`}</small></div><div className={`team away ${g.possession==='away'&&!coinToss?'hasBall':''}`} style={{borderColor:team('away',g).color}}><b>{g.score.away}</b><span className="teamName">{team('away',g).short}</span></div></section>
+      <section className="scoreboard" aria-label="Scoreboard"><div className={`team home ${g.possession==='home'&&!coinToss?'hasBall':''}`} style={{borderColor:team('home',g).color}}><span className="teamName">{team('home',g).short}</span><b>{g.score.home}</b></div><div className="centerScore"><span>{g.overtime?.mode==='shootout'?`${g.overtime.round+1}OT`:g.overtime?'OT':`Q${g.quarter}`} · {g.overtime?.mode==='shootout'?'—':clockText(g.seconds)}</span><strong>{situation}</strong></div><div className={`team away ${g.possession==='away'&&!coinToss?'hasBall':''}`} style={{borderColor:team('away',g).color}}><b>{g.score.away}</b><span className="teamName">{team('away',g).short}</span></div></section>
       <div className="layout"><section className="gameColumn">
         <FieldView game={fieldGame} matchup={matchup} progress={progress} debug={debug&&(g.possession==='away'||isPlaying(flow.phase))} flow={flow.phase} fromMatchup={transitionFrom} previousMatchup={liveMatchup} resultText={playResult}/>
       </section>
