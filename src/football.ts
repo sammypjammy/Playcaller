@@ -181,7 +181,7 @@ export function buildDefense(team:Side,lookId:string,offense:ActivePlayer[],call
     const p=active(next(position),['Will LB','Mike LB','Sam LB','Jack LB'][i],{yard:los+5.8,lateral},false,false)
     const gaps:Gap[]=['B-left','A-left','A-right','B-right']
     const blitz=concept==='cover0'?i===pack.linebackers.length-1:concept==='sam-blitz'?i===pack.linebackers.length-1:concept==='outside-blitz'?i===0||i===pack.linebackers.length-1:concept==='inside-blitz'?i===1||i===2:false
-    p.assignment=blitz?{kind:'blitz',gap:concept==='outside-blitz'?(i===0?'D-left':'D-right'):gaps[i%4]}:{kind:'runGap',gap:gaps[i%4]}
+    p.assignment=blitz?{kind:'blitz',gap:concept==='sam-blitz'?'C-right':concept==='outside-blitz'?(i===0?'D-left':'D-right'):gaps[i%4]}:{kind:'runGap',gap:gaps[i%4]}
     players.push(p)
   })
   const wr=offense.filter(p=>p.position==='WR').sort((a,b)=>a.field.lateral-b.field.lateral)

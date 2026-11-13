@@ -9,9 +9,11 @@ export type Team = { name: string; short: string; color: string; accent: string;
 export type TeamId='red'|'blue'|'green'|'black'
 export type Result = { yards: number; text: string; offense: string; defense: string; turnover: boolean; touchdown: boolean; defensiveTouchdown?:boolean; returnYards?:number; safety: boolean; firstDown: boolean; clock: number; event?:'run'|'completion'|'incomplete'|'sack'|'interception'|'fumble'; matchup?:MatchupRating; why?:string; replay?:ReplayPlan; conversionReturn?:boolean; returnerId?:string; punt?:{catchYard:number;endYard:number;returnYards:number;touchback:boolean} }
 export type PlayRecord = { snap: number; mine: string; theirs: string; outcome: string }
+export type TeamStats = { rushingYards:number; passingYards:number; rushes:number; attempts:number; completions:number; tacklesForLoss:number; sacks:number; interceptions:number }
+export const emptyStats = ():TeamStats => ({rushingYards:0,passingYards:0,rushes:0,attempts:0,completions:0,tacklesForLoss:0,sacks:0,interceptions:0})
 export type Conversion = {team:Side;driveOffense:Side;stage:'choice'|'pick'|'result';mode?:'pat'|'two';result?:string}
 export type Overtime = {mode:'quarter'|'shootout';round:number;first:Side;turns:number}
-export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; openingReceiver:Side; homeTeamId:TeamId; awayTeamId:TeamId; overtime?:Overtime; pendingPeriod?:2|3|4; yard: number; down: number; toGo: number; score: Record<Side, number>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
+export type Game = { phase: Phase; quarter: number; seconds: number; possession: Side; openingReceiver:Side; homeTeamId:TeamId; awayTeamId:TeamId; overtime?:Overtime; pendingPeriod?:2|3|4; yard: number; down: number; toGo: number; score: Record<Side, number>; stats:Record<Side,TeamStats>; drive: number; snap: number; selected: string; last?: Result; log: string[]; history: PlayRecord[]; recent: string[]; ballStart: number; ballEnd: number; seed: number; conversion?:Conversion }
 
 export const offense: Play[] = offensivePlays
 export const defense: Play[] = defensivePlays
@@ -30,7 +32,7 @@ export function opponentFor(selected:TeamId,draw:number):TeamId{return teamIds.f
 export const clockText = (s: number) => `${Math.floor(Math.max(0,s)/60)}:${String(Math.max(0,s)%60).padStart(2,'0')}`
 export const fieldPosition = (yard: number) => yard === 50 ? '50' : yard < 50 ? `OWN ${yard}` : `OPP ${100-yard}`
 export const nextRandom = (seed: number): [number,number] => { const n = (Math.imul(seed,1664525)+1013904223)>>>0; return [n,n/4294967296] }
-export function fresh(seed = Date.now()>>>0,homeTeamId:TeamId='red',awayTeamId:TeamId='blue'): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',openingReceiver:'home',homeTeamId,awayTeamId,yard:25,down:1,toGo:10,score:{home:0,away:0},drive:1,snap:0,selected:'sbInside',log:[`Opening kickoff: ${teams[homeTeamId].short} starts at its 25.`],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
+export function fresh(seed = Date.now()>>>0,homeTeamId:TeamId='red',awayTeamId:TeamId='blue'): Game { return {phase:'select',quarter:1,seconds:180,possession:'home',openingReceiver:'home',homeTeamId,awayTeamId,yard:25,down:1,toGo:10,score:{home:0,away:0},stats:{home:emptyStats(),away:emptyStats()},drive:1,snap:0,selected:'sbInside',log:[`Opening kickoff: ${teams[homeTeamId].short} starts at its 25.`],history:[],recent:[],ballStart:25,ballEnd:25,seed} }
 export function openingKickoff(g:Game,receiver:Side):Game{
   return {...g,possession:receiver,openingReceiver:receiver,yard:25,down:1,toGo:10,selected:receiver==='home'?'sbInside':'cover3',ballStart:25,ballEnd:25,log:[`Opening kickoff: ${team(receiver,g).short} receives at its 25.`]}
 }
@@ -117,9 +119,16 @@ function startNextPeriod(g:Game,nextQuarter:2|3|4):Game{
 }
 export function finish(g:Game,result:Result,seed:number):Game {
   const time=advanceClock(g,result.clock), p=g.possession, opp=other(p)
+  const attackStats={...g.stats[p]},defenseStats={...g.stats[opp]}
+  const event=result.event??(offenseById(result.offense)?.kind==='run'?'run':'completion')
+  if(event==='run'){attackStats.rushes++;attackStats.rushingYards+=result.yards}
+  else {attackStats.attempts++;if(event==='completion'){attackStats.completions++;attackStats.passingYards+=Math.max(0,result.yards)}}
+  if(result.yards<0&&(event==='run'||event==='sack'))defenseStats.tacklesForLoss++
+  if(event==='sack')defenseStats.sacks++
+  if(event==='interception')defenseStats.interceptions++
   const offensiveName=offenseById(result.offense)?.name??result.offense
   const defensiveName=defenseById(result.defense)?.name??result.defense.replace(/([A-Z])/g,' $1').replace(/^./,x=>x.toUpperCase())
-  const base:Game={...g,phase:'select',seed,quarter:time.quarter,seconds:time.seconds,pendingPeriod:undefined,snap:g.snap+1,last:result,history:[{snap:g.snap+1,mine:p==='home'?offensiveName:defensiveName,theirs:p==='home'?defensiveName:offensiveName,outcome:result.text},...g.history],recent:[...g.recent,result.offense].slice(-5),ballStart:g.yard,ballEnd:result.event==='interception'?result.replay?.returnEndYard??g.yard:Math.max(0,Math.min(100,g.yard+result.yards))}
+  const base:Game={...g,stats:{...g.stats,[p]:attackStats,[opp]:defenseStats},phase:'select',seed,quarter:time.quarter,seconds:time.seconds,pendingPeriod:undefined,snap:g.snap+1,last:result,history:[{snap:g.snap+1,mine:p==='home'?offensiveName:defensiveName,theirs:p==='home'?defensiveName:offensiveName,outcome:result.text},...g.history],recent:[...g.recent,result.offense].slice(-5),ballStart:g.yard,ballEnd:result.event==='interception'?result.replay?.returnEndYard??g.yard:Math.max(0,Math.min(100,g.yard+result.yards))}
   const call=`${team(p,g).short} ${offensiveName} vs ${defensiveName}: ${result.text}`
   base.log=addLog(g,call)
   if(result.touchdown){const scorer=result.defensiveTouchdown?opp:p;base.score={...g.score,[scorer]:g.score[scorer]+6};base.possession=scorer;base.log=addLog({...g,log:base.log},`${team(scorer,g).short} ${result.defensiveTouchdown?'pick six':'touchdown'}! (+6) ${g.overtime?.mode==='shootout'?'Two-point try required.':'Choose an extra-point attempt.'}`);base.conversion={team:scorer,driveOffense:p,stage:'choice'};base.pendingPeriod=time.nextQuarter;base.yard=98;base.down=1;base.toGo=2;base.recent=[]}
